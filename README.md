@@ -1,4 +1,4 @@
-# BlueCat 网吧管理系统
+# CyberPulse 网咖脉搏
 
 一个基于 Spring Boot + Vue 3 的网吧实时监控系统，用于采集和管理网吧机器状态数据。
 
@@ -260,7 +260,7 @@ shop_config (网吧配置: JWT Token + AppID)
 ```bash
 # 1. 创建数据库
 mysql -u root -p
-CREATE DATABASE bluecat DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE DATABASE cyberpulse DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 # 2. 执行SQL脚本
 mysql -u root -p bluecat < sql/init.sql
@@ -272,6 +272,8 @@ vim src/main/resources/application.yml
 
 # 4. 启动项目
 mvn spring-boot:run
+
+# 数据库名称默认为 cyberpulse，可在 application.yml 中修改
 ```
 
 ### 前端启动

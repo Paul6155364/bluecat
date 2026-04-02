@@ -1,0 +1,163 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: bluecat-backend
+
+  # MVC配置 (解决Swagger与Spring Boot 2.6.x兼容问题)
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+  # 数据源配置
+  datasource:
+    url: jdbc:mysql://118.122.112.142:3306/bluecat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    username: root
+    password: root123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+
+  # Redis配置
+  data:
+    redis:
+      host: 118.122.112.142
+      port: 6379
+      password: root123
+      database: 0
+      timeout: 30000
+      client-type: jedis
+
+  # Jackson配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# MyBatis-Plus配置
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.bluecat.entity
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+    banner: false
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    call-setters-on-nulls: true
+    jdbc-type-for-null: 'null'
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# Sa-Token配置
+sa-token:
+  # token名称 (同时也是cookie名称)
+  token-name: Authorization
+  # token有效期，单位s (默认30天, -1代表永不过期)
+  timeout: 2592000
+  # token临时有效期 (指定时间内无操作就过期)
+  active-timeout: -1
+  # 是否允许同一账号并发登录
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个token
+  is-share: true
+  # token风格
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: true
+  # 是否从cookie中读取token
+  is-read-cookie: false
+  # 是否从请求体里读取token
+  is-read-body: false
+  # 是否从header中读取token
+  is-read-header: true
+  # token前缀
+  token-prefix: Bearer
+
+# Knife4j配置
+knife4j:
+  enable: true
+  setting:
+    language: zh-CN
+    swagger-model-name: 实体类列表
+
+# Swagger配置
+springfox:
+  documentation:
+    enabled: true
+    swagger-ui:
+      enabled: true
+
+# 日志配置
+logging:
+  level:
+    root: info
+    com.bluecat: debug
+    com.baomidou.mybatisplus: debug
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n'
+  file:
+    name: logs/bluecat.log
+    max-size: 10MB
+    max-history: 30
+
+# 应用自定义配置
+bluecat:
+  # 蓝老板API配置
+  api:
+    base-url-user: https://xmp.54laoban.cn/api/service-app-wechat/client-c/wechat/mp/user
+    base-url-book: https://xmp.54laoban.cn/api/service-value-added/client-c/book/seat
+    base-url-member: https://api.wxdesk.com/api-user/client/user_c/wechatmp
+    app-id: 2AXEDBKW3NRC
+    default-headers:
+      Host: xmp.54laoban.cn
+      X-Reuqest-Appid: 2AXEDBKW3NRC
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36
+      Accept: application/json, text/plain, */*
+      Sec-Fetch-Site: same-origin
+      Sec-Fetch-Mode: cors
+      Sec-Fetch-Dest: empty
+      Accept-Language: zh-CN,zh;q=0.9
+    # 请求超时时间(毫秒)
+    timeout: 10000
+    # 重试次数
+    retry-times: 3
+    # 重试间隔(毫秒)
+    retry-interval: 1000
+
+  # 数据采集配置
+  collection:
+    # 定时任务cron表达式 (默认每小时执行一次)
+    cron: 0 0 * * * ?
+    # 是否启用定时采集
+    enabled: true
+    # 并发线程数
+    thread-pool-size: 5
+
+  # 初始管理员账号
+  init:
+    username: admin
+    password: admin123
