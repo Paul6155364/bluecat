@@ -3,11 +3,9 @@ package com.bluecat.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bluecat.common.Result;
 import com.bluecat.entity.AreaStatusSnapshot;
-import com.bluecat.entity.MachineStatusHistory;
 import com.bluecat.entity.ShopInfo;
 import com.bluecat.entity.ShopStatusSnapshot;
 import com.bluecat.service.AreaStatusSnapshotService;
-import com.bluecat.service.MachineStatusHistoryService;
 import com.bluecat.service.ShopInfoService;
 import com.bluecat.service.ShopStatusSnapshotService;
 import io.swagger.annotations.Api;
@@ -21,7 +19,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -40,7 +37,6 @@ public class AnalysisController {
 
     private final ShopStatusSnapshotService shopStatusSnapshotService;
     private final ShopInfoService shopInfoService;
-    private final MachineStatusHistoryService machineStatusHistoryService;
     private final AreaStatusSnapshotService areaStatusSnapshotService;
 
     /**
@@ -52,18 +48,18 @@ public class AnalysisController {
             @RequestParam List<Long> shopIds,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-        
+
         Map<String, Object> result = new HashMap<>();
         List<Map<String, Object>> shopDataList = new ArrayList<>();
-        
+
         for (Long shopId : shopIds) {
             ShopInfo shop = shopInfoService.getById(shopId);
-            if (shop == null) continue;
-            
+            if (shop == null) { continue; }
+
             Map<String, Object> shopData = new HashMap<>();
             shopData.put("shopId", shopId);
             shopData.put("shopName", shop.getName());
-            
+
             // 获取最新快照
             ShopStatusSnapshot latestSnapshot = shopStatusSnapshotService.getLatestByShopId(shopId);
             if (latestSnapshot != null) {
@@ -77,7 +73,7 @@ public class AnalysisController {
                 shopData.put("busyMachines", 0);
                 shopData.put("occupancyRate", 0);
             }
-            
+
             // 获取历史数据计算平均值
             LambdaQueryWrapper<ShopStatusSnapshot> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(ShopStatusSnapshot::getShopId, shopId);
@@ -88,7 +84,7 @@ public class AnalysisController {
                 wrapper.le(ShopStatusSnapshot::getSnapshotTime, endTime);
             }
             wrapper.orderByDesc(ShopStatusSnapshot::getSnapshotTime).last("LIMIT 100");
-            
+
             List<ShopStatusSnapshot> snapshots = shopStatusSnapshotService.list(wrapper);
             if (!snapshots.isEmpty()) {
                 double avgRate = snapshots.stream()
@@ -106,11 +102,11 @@ public class AnalysisController {
                         .mapToInt(s -> s.getOccupancyRate().intValue())
                         .min()
                         .orElse(0);
-                
+
                 shopData.put("avgOccupancyRate", Math.round(avgRate * 10) / 10.0);
                 shopData.put("maxOccupancyRate", maxRate);
                 shopData.put("minOccupancyRate", minRate);
-                
+
                 // 趋势数据
                 List<Map<String, Object>> trend = new ArrayList<>();
                 for (int i = Math.min(snapshots.size() - 1, 19); i >= 0; i--) {
@@ -127,10 +123,10 @@ public class AnalysisController {
                 shopData.put("minOccupancyRate", 0);
                 shopData.put("trend", Collections.emptyList());
             }
-            
+
             shopDataList.add(shopData);
         }
-        
+
         // 排序
         shopDataList.sort((a, b) -> {
             Object rateA = a.get("occupancyRate");
@@ -139,15 +135,16 @@ public class AnalysisController {
             int valB = rateB instanceof BigDecimal ? ((BigDecimal) rateB).intValue() : (rateB instanceof Integer ? (Integer) rateB : 0);
             return Integer.compare(valB, valA);
         });
-        
+
         result.put("shops", shopDataList);
         result.put("rankTime", LocalDateTime.now());
-        
+
         return Result.success(result);
     }
 
     /**
      * 高峰时段热力图数据
+     * 使用 AreaStatusSnapshot 表，该表已包含每个区域每个时间点的聚合数据
      */
     @ApiOperation("高峰时段热力图数据")
     @GetMapping("/heatmap")
@@ -155,9 +152,9 @@ public class AnalysisController {
             @RequestParam(required = false) Long shopId,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
-        
+
         Map<String, Object> result = new HashMap<>();
-        
+
         // 默认查询最近7天
         LocalDateTime endDateTime;
         LocalDateTime startDateTime;
@@ -171,132 +168,122 @@ public class AnalysisController {
         } else {
             startDateTime = startDate.atStartOfDay();
         }
-        
-        // 查询机器状态历史数据
-        LambdaQueryWrapper<MachineStatusHistory> wrapper = new LambdaQueryWrapper<>();
+
+        // 使用 AreaStatusSnapshot 表查询，该表已包含聚合好的数据
+        LambdaQueryWrapper<AreaStatusSnapshot> wrapper = new LambdaQueryWrapper<>();
         if (shopId != null) {
-            wrapper.eq(MachineStatusHistory::getShopId, shopId);
+            wrapper.eq(AreaStatusSnapshot::getShopId, shopId);
         }
-        wrapper.ge(MachineStatusHistory::getSnapshotTime, startDateTime)
-              .le(MachineStatusHistory::getSnapshotTime, endDateTime)
-              .select(MachineStatusHistory::getShopId, MachineStatusHistory::getAreaName,
-                      MachineStatusHistory::getStatus, MachineStatusHistory::getSnapshotTime);
-        
-        List<MachineStatusHistory> historyList = machineStatusHistoryService.list(wrapper);
-        
-        // 按小时统计
-        // hours: 0-23, days: 日期列表
-        // [空闲次数, 占用次数] -> status: 1=空闲, 0=占用
-        int[][] hourData = new int[24][2]; // [空闲次数, 占用次数]
-        
+        wrapper.ge(AreaStatusSnapshot::getSnapshotTime, startDateTime)
+              .le(AreaStatusSnapshot::getSnapshotTime, endDateTime);
+
+        List<AreaStatusSnapshot> snapshotList = areaStatusSnapshotService.list(wrapper);
+
+        // 按小时统计 - 每个快照计算一次上座率
+        // Map<小时, List<上座率>>
+        Map<Integer, List<Integer>> hourRateMap = new HashMap<>();
+
         // 按日期+小时统计
-        Map<String, Map<Integer, int[]>> dailyHourData = new TreeMap<>();
-        
-        for (MachineStatusHistory h : historyList) {
-            int hour = h.getSnapshotTime().getHour();
-            String dateKey = h.getSnapshotTime().toLocalDate().toString();
-            
-            // status: 1=空闲(索引0), 0=占用(索引1)
-            int statusIndex = (h.getStatus() != null && h.getStatus() == 1) ? 0 : 1;
-            hourData[hour][statusIndex]++;
-            
-            dailyHourData.computeIfAbsent(dateKey, k -> new HashMap<>())
-                    .computeIfAbsent(hour, k -> new int[2])[statusIndex]++;
+        Map<String, Map<Integer, List<Integer>>> dailyHourRateMap = new TreeMap<>();
+
+        // 按区域统计
+        Map<String, List<Integer>> areaRateMap = new HashMap<>();
+
+        // 日历数据
+        Map<String, List<Integer>> dailyRateMap = new HashMap<>();
+
+        for (AreaStatusSnapshot snapshot : snapshotList) {
+            LocalDateTime snapshotTime = snapshot.getSnapshotTime() != null
+                ? snapshot.getSnapshotTime()
+                : snapshot.getCreateTime();
+            int hour = snapshotTime.getHour();
+            String dateKey = snapshotTime.toLocalDate().toString();
+            int rate = snapshot.getOccupancyRate() != null ? snapshot.getOccupancyRate().intValue() : 0;
+            String areaName = snapshot.getAreaName() != null ? snapshot.getAreaName() : "未知区域";
+
+            // 按小时收集上座率
+            hourRateMap.computeIfAbsent(hour, k -> new ArrayList<>()).add(rate);
+
+            // 按日期+小时收集上座率
+            dailyHourRateMap.computeIfAbsent(dateKey, k -> new HashMap<>())
+                    .computeIfAbsent(hour, k -> new ArrayList<>()).add(rate);
+
+            // 按区域收集上座率
+            areaRateMap.computeIfAbsent(areaName, k -> new ArrayList<>()).add(rate);
+
+            // 日历数据
+            dailyRateMap.computeIfAbsent(dateKey, k -> new ArrayList<>()).add(rate);
         }
-        
+
         // 计算每小时平均上座率
         List<Map<String, Object>> hourlyRate = new ArrayList<>();
         for (int h = 0; h < 24; h++) {
-            int total = hourData[h][0] + hourData[h][1];
-            int rate = total > 0 ? (hourData[h][1] * 100 / total) : 0;
-            
+            List<Integer> rates = hourRateMap.getOrDefault(h, Collections.emptyList());
+            int avgRate = rates.isEmpty() ? 0 : (int) rates.stream().mapToInt(Integer::intValue).average().orElse(0);
+
             Map<String, Object> item = new HashMap<>();
             item.put("hour", h);
             item.put("hourLabel", String.format("%02d:00", h));
-            item.put("rate", rate);
-            item.put("total", total);
-            item.put("busy", hourData[h][1]);
-            item.put("free", hourData[h][0]);
+            item.put("rate", avgRate);
+            item.put("total", rates.size()); // 快照数量
+            item.put("busy", (int) rates.stream().mapToInt(Integer::intValue).average().orElse(0));
+            item.put("free", 100 - avgRate);
             hourlyRate.add(item);
         }
-        
+
         // 热力图数据 [日期, 小时, 上座率]
         List<List<Object>> heatmapData = new ArrayList<>();
-        List<String> dateList = new ArrayList<>(dailyHourData.keySet());
-        
+        List<String> dateList = new ArrayList<>(dailyHourRateMap.keySet());
+
         for (int dayIndex = 0; dayIndex < dateList.size(); dayIndex++) {
             String dateKey = dateList.get(dayIndex);
-            Map<Integer, int[]> dayData = dailyHourData.get(dateKey);
-            
+            Map<Integer, List<Integer>> dayData = dailyHourRateMap.get(dateKey);
+
             for (int h = 0; h < 24; h++) {
-                int[] counts = dayData.getOrDefault(h, new int[2]);
-                int total = counts[0] + counts[1];
-                int rate = total > 0 ? (counts[1] * 100 / total) : 0;
-                heatmapData.add(Arrays.asList(dayIndex, h, rate));
+                List<Integer> rates = dayData.getOrDefault(h, Collections.emptyList());
+                int avgRate = rates.isEmpty() ? 0 : (int) rates.stream().mapToInt(Integer::intValue).average().orElse(0);
+                heatmapData.add(Arrays.asList(dayIndex, h, avgRate));
             }
         }
-        
-        // 按区域统计
-        Map<String, int[]> areaData = new HashMap<>();
-        for (MachineStatusHistory h : historyList) {
-            String areaName = h.getAreaName() != null ? h.getAreaName() : "未知区域";
-            // status: 1=空闲(索引0), 0=占用(索引1)
-            int statusIndex = (h.getStatus() != null && h.getStatus() == 1) ? 0 : 1;
-            areaData.computeIfAbsent(areaName, k -> new int[2])[statusIndex]++;
-        }
-        
+
+        // 按区域计算平均上座率
         List<Map<String, Object>> areaRate = new ArrayList<>();
-        for (Map.Entry<String, int[]> entry : areaData.entrySet()) {
-            int total = entry.getValue()[0] + entry.getValue()[1];
-            int rate = total > 0 ? (entry.getValue()[1] * 100 / total) : 0;
-            
+        for (Map.Entry<String, List<Integer>> entry : areaRateMap.entrySet()) {
+            List<Integer> rates = entry.getValue();
+            int avgRate = (int) rates.stream().mapToInt(Integer::intValue).average().orElse(0);
+
             Map<String, Object> item = new HashMap<>();
             item.put("areaName", entry.getKey());
-            item.put("rate", rate);
-            item.put("total", total);
-            item.put("busy", entry.getValue()[1]);
+            item.put("rate", avgRate);
+            item.put("total", rates.size()); // 快照数量
+            item.put("busy", avgRate);
             areaRate.add(item);
         }
         areaRate.sort((a, b) -> ((Integer) b.get("rate")).compareTo((Integer) a.get("rate")));
-        
+
         // 日历视图数据 (类似GitHub贡献图)
         List<Map<String, Object>> calendarData = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        
-        Map<String, Integer> dailyTotal = new HashMap<>();
-        Map<String, Integer> dailyBusy = new HashMap<>();
-        
-        for (MachineStatusHistory h : historyList) {
-            String dateKey = h.getSnapshotTime().toLocalDate().toString();
-            dailyTotal.merge(dateKey, 1, Integer::sum);
-            // status: 1=空闲, 0=占用, 统计占用数
-            if (h.getStatus() != null && h.getStatus() == 0) {
-                dailyBusy.merge(dateKey, 1, Integer::sum);
-            }
-        }
-        
-        for (Map.Entry<String, Integer> entry : dailyTotal.entrySet()) {
-            int total = entry.getValue();
-            int busy = dailyBusy.getOrDefault(entry.getKey(), 0);
-            int rate = total > 0 ? (busy * 100 / total) : 0;
-            
+        for (Map.Entry<String, List<Integer>> entry : dailyRateMap.entrySet()) {
+            List<Integer> rates = entry.getValue();
+            int avgRate = (int) rates.stream().mapToInt(Integer::intValue).average().orElse(0);
+
             Map<String, Object> item = new HashMap<>();
             item.put("date", entry.getKey());
-            item.put("rate", rate);
-            item.put("level", getLevel(rate));
+            item.put("rate", avgRate);
+            item.put("level", getLevel(avgRate));
             calendarData.add(item);
         }
         calendarData.sort(Comparator.comparing(m -> (String) m.get("date")));
-        
+
         result.put("hourlyRate", hourlyRate);
         result.put("heatmapData", heatmapData);
         result.put("dateList", dateList);
         result.put("areaRate", areaRate);
         result.put("calendarData", calendarData);
-        result.put("totalRecords", historyList.size());
+        result.put("totalRecords", snapshotList.size());
         result.put("startDate", startDateTime.toLocalDate().toString());
         result.put("endDate", endDateTime.toLocalDate().toString());
-        
+
         return Result.success(result);
     }
 
@@ -321,14 +308,14 @@ public class AnalysisController {
         List<ShopInfo> shops = shopInfoService.list(
                 new LambdaQueryWrapper<ShopInfo>().select(ShopInfo::getId, ShopInfo::getName)
         );
-        
+
         List<Map<String, Object>> result = shops.stream().map(shop -> {
             Map<String, Object> item = new HashMap<>();
             item.put("id", shop.getId());
             item.put("name", shop.getName());
             return item;
         }).collect(Collectors.toList());
-        
+
         return Result.success(result);
     }
 }

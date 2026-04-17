@@ -4,12 +4,14 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.bluecat.common.Result;
 import com.bluecat.config.BusinessException;
+import com.bluecat.dto.LoginResultDTO;
 import com.bluecat.dto.MenuTreeDTO;
 import com.bluecat.entity.SysRole;
 import com.bluecat.entity.SysUser;
 import com.bluecat.service.SysMenuService;
 import com.bluecat.service.SysRoleService;
 import com.bluecat.service.SysUserService;
+import com.bluecat.service.SysUserConfigService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 认证控制器
@@ -37,10 +37,11 @@ public class AuthController {
     private final SysUserService sysUserService;
     private final SysRoleService sysRoleService;
     private final SysMenuService sysMenuService;
+    private final SysUserConfigService sysUserConfigService;
 
     @ApiOperation("登录")
     @PostMapping("/login")
-    public Result<Map<String, Object>> login(@RequestBody Map<String, String> params) {
+    public Result<LoginResultDTO> login(@RequestBody java.util.Map<String, String> params) {
         String username = params.get("username");
         String password = params.get("password");
 
@@ -77,12 +78,25 @@ public class AuthController {
         // 获取用户菜单
         List<MenuTreeDTO> menus = sysMenuService.userMenus(user.getId());
 
-        // 返回token
-        Map<String, Object> result = new HashMap<>();
-        result.put("token", StpUtil.getTokenValue());
-        result.put("user", user);
-        result.put("roles", roles);
-        result.put("menus", menus);
+        // 获取用户数据权限
+        Integer dataScope = user.getDataScope() != null ? user.getDataScope() : 1;
+        List<Long> configIdList = null;
+        
+        // 如果不是全部数据权限，获取授权的网吧配置列表
+        if (dataScope != 2) {
+            configIdList = sysUserConfigService.getConfigIdsByUserId(user.getId());
+        }
+
+        // 构建返回结果
+        LoginResultDTO result = new LoginResultDTO();
+        result.setToken(StpUtil.getTokenValue());
+        result.setUser(user);
+        result.setRoles(roles);
+        result.setMenus(menus);
+        result.setDataScope(dataScope);
+        result.setConfigIdList(configIdList);
+
+        log.info("用户登录成功: userId={}, username={}, dataScope={}", user.getId(), username, dataScope);
 
         return Result.success("登录成功", result);
     }
@@ -96,7 +110,7 @@ public class AuthController {
 
     @ApiOperation("获取当前用户信息")
     @GetMapping("/info")
-    public Result<Map<String, Object>> info() {
+    public Result<LoginResultDTO> info() {
         Long userId = StpUtil.getLoginIdAsLong();
         SysUser user = sysUserService.getById(userId);
         user.setPassword(null);
@@ -107,10 +121,22 @@ public class AuthController {
         // 获取用户菜单
         List<MenuTreeDTO> menus = sysMenuService.userMenus(userId);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("user", user);
-        result.put("roles", roles);
-        result.put("menus", menus);
+        // 获取用户数据权限
+        Integer dataScope = user.getDataScope() != null ? user.getDataScope() : 1;
+        List<Long> configIdList = null;
+        
+        // 如果不是全部数据权限，获取授权的网吧配置列表
+        if (dataScope != 2) {
+            configIdList = sysUserConfigService.getConfigIdsByUserId(userId);
+        }
+
+        // 构建返回结果
+        LoginResultDTO result = new LoginResultDTO();
+        result.setUser(user);
+        result.setRoles(roles);
+        result.setMenus(menus);
+        result.setDataScope(dataScope);
+        result.setConfigIdList(configIdList);
 
         return Result.success(result);
     }

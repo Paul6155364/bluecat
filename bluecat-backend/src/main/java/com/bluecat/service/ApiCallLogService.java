@@ -16,4 +16,10 @@ public interface ApiCallLogService extends IService<ApiCallLog> {
      * 分页查询
      */
     Page<ApiCallLog> pageList(Integer pageNum, Integer pageSize, Long configId, String apiName);
+    
+    /**
+     * 异步保存API调用日志
+     * 不阻塞主流程，提高采集性能
+     */
+    void saveAsync(ApiCallLog log);
 }

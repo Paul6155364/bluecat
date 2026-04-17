@@ -58,6 +58,10 @@ public class AreaStatusSnapshot implements Serializable {
     @ApiModelProperty("上座率(%)")
     private BigDecimal occupancyRate;
 
+    @ApiModelProperty("快照时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime snapshotTime;
+
     @ApiModelProperty("创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;

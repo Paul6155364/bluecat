@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bluecat.entity.ShopInfo;
 import com.bluecat.mapper.ShopInfoMapper;
 import com.bluecat.service.ShopInfoService;
+import com.bluecat.util.DataScopeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -29,18 +30,32 @@ public class ShopInfoServiceImpl extends ServiceImpl<ShopInfoMapper, ShopInfo> i
         wrapper.eq(configId != null, ShopInfo::getConfigId, configId)
                 .like(StringUtils.hasText(name), ShopInfo::getName, name)
                 .orderByDesc(ShopInfo::getCreateTime);
+        
+        // 添加数据权限过滤 - 按 config_id 过滤
+        DataScopeUtil.addDataScopeFilter(wrapper, ShopInfo::getConfigId);
+        
         return page(page, wrapper);
     }
 
     @Override
     public List<ShopInfo> listByConfigId(Long configId) {
-        return list(new LambdaQueryWrapper<ShopInfo>()
-                .eq(ShopInfo::getConfigId, configId));
+        LambdaQueryWrapper<ShopInfo> wrapper = new LambdaQueryWrapper<ShopInfo>()
+                .eq(ShopInfo::getConfigId, configId);
+        
+        // 添加数据权限过滤 - 按 config_id 过滤
+        DataScopeUtil.addDataScopeFilter(wrapper, ShopInfo::getConfigId);
+        
+        return list(wrapper);
     }
 
     @Override
     public ShopInfo getBySnbid(String snbid) {
-        return getOne(new LambdaQueryWrapper<ShopInfo>()
-                .eq(ShopInfo::getSnbid, snbid));
+        LambdaQueryWrapper<ShopInfo> wrapper = new LambdaQueryWrapper<ShopInfo>()
+                .eq(ShopInfo::getSnbid, snbid);
+        
+        // 添加数据权限过滤 - 按 config_id 过滤
+        DataScopeUtil.addDataScopeFilter(wrapper, ShopInfo::getConfigId);
+        
+        return getOne(wrapper);
     }
 }

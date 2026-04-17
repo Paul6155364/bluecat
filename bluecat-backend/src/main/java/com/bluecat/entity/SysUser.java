@@ -51,4 +51,7 @@ public class SysUser extends BaseEntity {
 
     @ApiModelProperty("最后登录IP")
     private String lastLoginIp;
+
+    @ApiModelProperty("数据权限范围:1仅授权配置,2全部数据")
+    private Integer dataScope;
 }

@@ -16,6 +16,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @MapperScan("com.bluecat.mapper")
 @EnableScheduling
+// @EnableAsync 已移至 ThreadPoolConfig
 public class BlueCatApplication {
 
     public static void main(String[] args) {

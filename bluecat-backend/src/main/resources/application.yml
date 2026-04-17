@@ -34,7 +34,7 @@ spring:
     redis:
       host: 118.122.112.142
       port: 6379
-      password: root123
+      password: redis123
       database: 0
       timeout: 30000
       client-type: jedis

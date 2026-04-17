@@ -10,10 +10,14 @@ import com.bluecat.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -64,6 +68,15 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     private final ShopAreaMapper shopAreaMapper;
     private final MachineInfoMapper machineInfoMapper;
     private final ShopImageMapper shopImageMapper;
+    
+    private final TransactionTemplate transactionTemplate;
+    
+    /**
+     * 自注入，用于调用@Async方法（同类内部调用需要通过代理）
+     */
+    @Autowired
+    @Lazy
+    private LaobanApiService self;
 
     @Override
     public Map<String, Object> testToken(ShopConfig config) {
@@ -141,8 +154,10 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Async("collectionExecutor")
     public void executeCollection(Long configId) {
+        log.info("开始异步采集任务: configId={}", configId);
+        
         ShopConfig config = shopConfigService.getById(configId);
         if (config == null || config.getStatus() != 1) {
             log.warn("配置不存在或已禁用: {}", configId);
@@ -167,38 +182,59 @@ public class LaobanApiServiceImpl implements LaobanApiService {
         DataCollectionTask task = createTask(configId, null, TaskType.SHOP_LIST.name());
 
         try {
-            // 1. 获取门店列表
+            // 1. 获取门店列表（独立事务）
             List<Map<String, Object>> shopList = getShopList(config);
-            saveShopList(config, shopList);
+            saveShopListInTransaction(config, shopList);
 
-            // 2. 遍历门店获取机器信息和状态
+            // 2. 遍历门店获取机器信息和状态（每个门店独立事务）
             List<ShopInfo> shops = shopInfoService.listByConfigId(configId);
             for (ShopInfo shop : shops) {
-                collectShopData(config, shop);
+                collectShopDataInTransaction(config, shop);
                 // 随机延迟1-3秒，模拟真人操作，避免触发反爬
                 randomDelay(1000, 3000);
             }
 
             finishTask(task, TaskStatus.SUCCESS, startTime);
+            log.info("采集任务完成: configId={}", configId);
         } catch (Exception e) {
             log.error("数据采集失败: configId={}", configId, e);
             finishTask(task, TaskStatus.FAILED, startTime, e.getMessage());
-            throw new BusinessException("数据采集失败: " + e.getMessage());
         }
     }
 
     @Override
+    @Async("collectionExecutor")
     public void executeAllCollection() {
+        log.info("开始执行所有采集任务");
         List<ShopConfig> configs = shopConfigService.listEnabled();
         for (ShopConfig config : configs) {
             try {
-                executeCollection(config.getId());
+                // 通过代理调用，使@Async生效
+                self.executeCollection(config.getId());
                 // 每个配置之间延迟3-5秒
                 randomDelay(3000, 5000);
             } catch (Exception e) {
                 log.error("采集失败: configId={}", config.getId(), e);
             }
         }
+    }
+    
+    /**
+     * 在独立事务中保存门店列表
+     */
+    private void saveShopListInTransaction(ShopConfig config, List<Map<String, Object>> shopList) {
+        transactionTemplate.executeWithoutResult(status -> {
+            saveShopList(config, shopList);
+        });
+    }
+    
+    /**
+     * 在独立事务中采集单个门店数据
+     */
+    private void collectShopDataInTransaction(ShopConfig config, ShopInfo shop) {
+        transactionTemplate.executeWithoutResult(status -> {
+            collectShopData(config, shop);
+        });
     }
 
     private void collectShopData(ShopConfig config, ShopInfo shop) {
@@ -508,6 +544,7 @@ public class LaobanApiServiceImpl implements LaobanApiService {
                 areaSnapshot.setFreeMachines(areaFree);
                 areaSnapshot.setBusyMachines(areaBusy);
                 areaSnapshot.setFreeMachineList(areaFreeMachines.get(areaName));
+                areaSnapshot.setSnapshotTime(snapshotTime); // 设置快照时间
 
                 if (areaTotal > 0) {
                     BigDecimal rate = BigDecimal.valueOf(areaBusy)
@@ -653,7 +690,8 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             log.error("API调用失败: {}", apiName, e);
             return null;
         } finally {
-            apiCallLogService.save(logEntry);
+            // 异步保存日志，不阻塞主流程
+            apiCallLogService.saveAsync(logEntry);
         }
     }
 

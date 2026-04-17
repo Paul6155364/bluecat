@@ -7,6 +7,8 @@ import com.bluecat.entity.ApiCallLog;
 import com.bluecat.mapper.ApiCallLogMapper;
 import com.bluecat.service.ApiCallLogService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -16,6 +18,7 @@ import org.springframework.util.StringUtils;
  * @author BlueCat
  * @since 2026-03-30
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApiCallLogServiceImpl extends ServiceImpl<ApiCallLogMapper, ApiCallLog> implements ApiCallLogService {
@@ -28,5 +31,15 @@ public class ApiCallLogServiceImpl extends ServiceImpl<ApiCallLogMapper, ApiCall
                 .like(StringUtils.hasText(apiName), ApiCallLog::getApiName, apiName)
                 .orderByDesc(ApiCallLog::getCallTime);
         return page(page, wrapper);
+    }
+    
+    @Override
+    @Async("apiLogExecutor")
+    public void saveAsync(ApiCallLog apiLog) {
+        try {
+            save(apiLog);
+        } catch (Exception e) {
+            log.error("异步保存API日志失败: apiName={}", apiLog.getApiName(), e);
+        }
     }
 }
