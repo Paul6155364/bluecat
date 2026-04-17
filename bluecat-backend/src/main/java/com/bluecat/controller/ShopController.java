@@ -1,7 +1,6 @@
 package com.bluecat.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bluecat.annotation.DataScope;
 import com.bluecat.common.PageResult;
 import com.bluecat.common.Result;
 import com.bluecat.entity.ShopArea;
@@ -34,7 +33,6 @@ public class ShopController {
 
     @ApiOperation("分页查询门店")
     @GetMapping("/page")
-    @DataScope
     public Result<PageResult<ShopInfo>> page(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
@@ -45,21 +43,18 @@ public class ShopController {
 
     @ApiOperation("查询所有门店")
     @GetMapping("/list")
-    @DataScope
     public Result<List<ShopInfo>> list(Long configId) {
         return Result.success(shopInfoService.listByConfigId(configId));
     }
 
     @ApiOperation("根据ID查询门店")
     @GetMapping("/{id}")
-    @DataScope
     public Result<ShopInfo> getById(@PathVariable Long id) {
         return Result.success(shopInfoService.getById(id));
     }
 
     @ApiOperation("查询门店区域列表")
     @GetMapping("/area/{shopId}")
-    @DataScope
     public Result<List<ShopArea>> listAreas(@PathVariable Long shopId) {
         return Result.success(shopAreaService.listByShopId(shopId));
     }

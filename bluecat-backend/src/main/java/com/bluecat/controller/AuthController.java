@@ -12,7 +12,6 @@ import com.bluecat.service.SysLoginLogService;
 import com.bluecat.service.SysMenuService;
 import com.bluecat.service.SysRoleService;
 import com.bluecat.service.SysUserService;
-import com.bluecat.service.SysUserConfigService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +38,6 @@ public class AuthController {
     private final SysUserService sysUserService;
     private final SysRoleService sysRoleService;
     private final SysMenuService sysMenuService;
-    private final SysUserConfigService sysUserConfigService;
     private final SysLoginLogService sysLoginLogService;
 
     @ApiOperation("登录")
@@ -94,25 +92,14 @@ public class AuthController {
         // 获取用户菜单
         List<MenuTreeDTO> menus = sysMenuService.userMenus(user.getId());
 
-        // 获取用户数据权限
-        Integer dataScope = user.getDataScope() != null ? user.getDataScope() : 1;
-        List<Long> configIdList = null;
-        
-        // 如果不是全部数据权限，获取授权的网吧配置列表
-        if (dataScope != 2) {
-            configIdList = sysUserConfigService.getConfigIdsByUserId(user.getId());
-        }
-
         // 构建返回结果
         LoginResultDTO result = new LoginResultDTO();
         result.setToken(StpUtil.getTokenValue());
         result.setUser(user);
         result.setRoles(roles);
         result.setMenus(menus);
-        result.setDataScope(dataScope);
-        result.setConfigIdList(configIdList);
 
-        log.info("用户登录成功: userId={}, username={}, dataScope={}", user.getId(), username, dataScope);
+        log.info("用户登录成功: userId={}, username={}", user.getId(), username);
 
         return Result.success("登录成功", result);
     }
@@ -137,22 +124,11 @@ public class AuthController {
         // 获取用户菜单
         List<MenuTreeDTO> menus = sysMenuService.userMenus(userId);
 
-        // 获取用户数据权限
-        Integer dataScope = user.getDataScope() != null ? user.getDataScope() : 1;
-        List<Long> configIdList = null;
-        
-        // 如果不是全部数据权限，获取授权的网吧配置列表
-        if (dataScope != 2) {
-            configIdList = sysUserConfigService.getConfigIdsByUserId(userId);
-        }
-
         // 构建返回结果
         LoginResultDTO result = new LoginResultDTO();
         result.setUser(user);
         result.setRoles(roles);
         result.setMenus(menus);
-        result.setDataScope(dataScope);
-        result.setConfigIdList(configIdList);
 
         return Result.success(result);
     }

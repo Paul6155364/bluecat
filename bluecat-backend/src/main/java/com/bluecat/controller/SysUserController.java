@@ -4,18 +4,14 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bluecat.annotation.DataScope;
 import com.bluecat.common.PageResult;
 import com.bluecat.common.Result;
 import com.bluecat.config.BusinessException;
 import com.bluecat.dto.UserDTO;
-import com.bluecat.entity.ShopConfig;
 import com.bluecat.entity.SysUser;
-import com.bluecat.service.ShopConfigService;
 import com.bluecat.service.SysMenuService;
 import com.bluecat.service.SysUserRoleService;
 import com.bluecat.service.SysUserService;
-import com.bluecat.service.SysUserConfigService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 用户管理控制器
@@ -44,8 +37,6 @@ public class SysUserController {
     private final SysUserService sysUserService;
     private final SysUserRoleService sysUserRoleService;
     private final SysMenuService sysMenuService;
-    private final SysUserConfigService sysUserConfigService;
-    private final ShopConfigService shopConfigService;
 
     @ApiOperation("用户列表")
     @GetMapping("/list")
@@ -162,9 +153,6 @@ public class SysUserController {
         // 删除用户角色关联
         sysUserRoleService.deleteByUserId(id);
 
-        // 删除用户网吧配置关联
-        sysUserConfigService.deleteUserConfigs(id);
-
         // 逻辑删除用户
         user.setDeleted(1);
         user.setUpdateTime(LocalDateTime.now());
@@ -201,111 +189,5 @@ public class SysUserController {
     public Result<List<Long>> getUserRoles(@PathVariable Long userId) {
         List<Long> roleIds = sysUserRoleService.listRoleIdsByUserId(userId);
         return Result.success(roleIds);
-    }
-
-    // ==================== 数据权限管理 ====================
-
-    @ApiOperation("获取用户授权的网吧配置列表")
-    @GetMapping("/configs/{userId}")
-    public Result<List<ShopConfig>> getUserConfigs(@PathVariable Long userId) {
-        // 获取用户授权的网吧配置ID列表
-        List<Long> configIds = sysUserConfigService.getConfigIdsByUserId(userId);
-        
-        if (configIds == null || configIds.isEmpty()) {
-            return Result.success(Collections.emptyList());
-        }
-
-        // 查询网吧配置详情
-        List<ShopConfig> configs = shopConfigService.listByIds(configIds);
-        return Result.success(configs);
-    }
-
-    @ApiOperation("保存用户授权网吧配置")
-    @PostMapping("/configs/{userId}")
-    public Result<Void> saveUserConfigs(@PathVariable Long userId, @RequestBody List<Long> configIds) {
-        // 检查用户是否存在
-        SysUser user = sysUserService.getById(userId);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
-
-        // 保存用户授权网吧配置
-        sysUserConfigService.saveUserConfigs(userId, configIds);
-
-        return Result.success("保存成功");
-    }
-
-    @ApiOperation("获取所有网吧配置列表（用于授权选择）")
-    @GetMapping("/all-configs")
-    public Result<List<ShopConfig>> getAllConfigs() {
-        List<ShopConfig> configs = shopConfigService.list();
-        return Result.success(configs);
-    }
-
-    @ApiOperation("获取用户未授权的网吧配置列表")
-    @GetMapping("/unauthorized-configs/{userId}")
-    public Result<List<ShopConfig>> getUnauthorizedConfigs(@PathVariable Long userId) {
-        // 获取用户授权的网吧配置ID列表
-        List<Long> authorizedConfigIds = sysUserConfigService.getConfigIdsByUserId(userId);
-
-        // 查询所有网吧配置
-        List<ShopConfig> allConfigs = shopConfigService.list();
-
-        // 过滤出未授权的网吧配置
-        List<ShopConfig> unauthorizedConfigs = allConfigs.stream()
-                .filter(config -> authorizedConfigIds == null || !authorizedConfigIds.contains(config.getId()))
-                .collect(Collectors.toList());
-
-        return Result.success(unauthorizedConfigs);
-    }
-
-    @ApiOperation("更新用户数据权限范围")
-    @PutMapping("/data-scope/{userId}")
-    public Result<Void> updateDataScope(@PathVariable Long userId, @RequestBody Map<String, Integer> params) {
-        // 检查用户是否存在
-        SysUser user = sysUserService.getById(userId);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
-
-        // 更新数据权限范围
-        Integer dataScope = params.get("dataScope");
-        if (dataScope == null || (dataScope != 1 && dataScope != 2)) {
-            throw new BusinessException("数据权限范围参数错误");
-        }
-
-        user.setDataScope(dataScope);
-        user.setUpdateTime(LocalDateTime.now());
-        sysUserService.updateById(user);
-
-        // 如果是全部数据权限，清除网吧配置授权
-        if (dataScope == 2) {
-            sysUserConfigService.deleteUserConfigs(userId);
-        }
-
-        return Result.success("更新成功");
-    }
-
-    @ApiOperation("批量授权网吧配置给多个用户")
-    @PostMapping("/batch-configs")
-    public Result<Void> batchAssignConfigs(@RequestBody Map<String, Object> params) {
-        @SuppressWarnings("unchecked")
-        List<Long> userIds = (List<Long>) params.get("userIds");
-        @SuppressWarnings("unchecked")
-        List<Long> configIds = (List<Long>) params.get("configIds");
-
-        if (userIds == null || userIds.isEmpty()) {
-            throw new BusinessException("用户ID列表不能为空");
-        }
-        if (configIds == null || configIds.isEmpty()) {
-            throw new BusinessException("网吧配置ID列表不能为空");
-        }
-
-        // 批量授权
-        for (Long userId : userIds) {
-            sysUserConfigService.saveUserConfigs(userId, configIds);
-        }
-
-        return Result.success("批量授权成功");
     }
 }

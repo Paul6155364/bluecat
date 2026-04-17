@@ -32,10 +32,4 @@ public class LoginResultDTO implements Serializable {
 
     @ApiModelProperty("菜单树")
     private List<MenuTreeDTO> menus;
-
-    @ApiModelProperty("数据权限范围:1仅授权配置,2全部数据")
-    private Integer dataScope;
-
-    @ApiModelProperty("授权的网吧配置ID列表")
-    private List<Long> configIdList;
 }

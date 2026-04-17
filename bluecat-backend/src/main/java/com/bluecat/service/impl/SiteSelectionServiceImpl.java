@@ -11,7 +11,6 @@ import com.bluecat.service.ShopConfigService;
 import com.bluecat.service.ShopInfoService;
 import com.bluecat.service.ShopStatusSnapshotService;
 import com.bluecat.service.SiteSelectionService;
-import com.bluecat.util.DataScopeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,14 +49,11 @@ public class SiteSelectionServiceImpl implements SiteSelectionService {
         result.setRadius(request.getRadius());
 
         try {
-            // 1. 查询所有门店（添加数据权限过滤）
+            // 1. 查询所有门店
             log.debug("查询所有门店...");
             LambdaQueryWrapper<ShopInfo> shopWrapper = new LambdaQueryWrapper<ShopInfo>()
                     .isNotNull(ShopInfo::getLongitude)
                     .isNotNull(ShopInfo::getLatitude);
-            
-            // 添加数据权限过滤 - 按config_id过滤
-            DataScopeUtil.addDataScopeFilter(shopWrapper, ShopInfo::getConfigId);
             
             List<ShopInfo> allShops = shopInfoService.list(shopWrapper);
             log.info("查询到 {} 家门店", allShops.size());

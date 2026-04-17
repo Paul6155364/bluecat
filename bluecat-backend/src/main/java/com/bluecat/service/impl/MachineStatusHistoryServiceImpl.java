@@ -6,19 +6,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bluecat.entity.MachineStatusHistory;
 import com.bluecat.mapper.MachineStatusHistoryMapper;
 import com.bluecat.service.MachineStatusHistoryService;
-import com.bluecat.util.DataScopeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * 机器实时状态历史表 Service实现
- *
- * @author BlueCat
- * @since 2026-03-30
- */
 @Service
 @RequiredArgsConstructor
 public class MachineStatusHistoryServiceImpl extends ServiceImpl<MachineStatusHistoryMapper, MachineStatusHistory> implements MachineStatusHistoryService {
@@ -32,10 +25,6 @@ public class MachineStatusHistoryServiceImpl extends ServiceImpl<MachineStatusHi
                 .ge(startTime != null, MachineStatusHistory::getSnapshotTime, startTime)
                 .le(endTime != null, MachineStatusHistory::getSnapshotTime, endTime)
                 .orderByDesc(MachineStatusHistory::getSnapshotTime);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineStatusHistory::getShopId);
-        
         return page(page, wrapper);
     }
 
@@ -44,10 +33,6 @@ public class MachineStatusHistoryServiceImpl extends ServiceImpl<MachineStatusHi
         LambdaQueryWrapper<MachineStatusHistory> wrapper = new LambdaQueryWrapper<MachineStatusHistory>()
                 .eq(MachineStatusHistory::getSnapshotId, snapshotId)
                 .orderByAsc(MachineStatusHistory::getComName);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineStatusHistory::getShopId);
-        
         return list(wrapper);
     }
 }

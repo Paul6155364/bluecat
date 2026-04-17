@@ -8,7 +8,6 @@ import com.bluecat.entity.ShopStatusSnapshot;
 import com.bluecat.service.AreaStatusSnapshotService;
 import com.bluecat.service.ShopInfoService;
 import com.bluecat.service.ShopStatusSnapshotService;
-import com.bluecat.util.DataScopeUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
@@ -53,16 +52,7 @@ public class AnalysisController {
         Map<String, Object> result = new HashMap<>();
         List<Map<String, Object>> shopDataList = new ArrayList<>();
 
-        // 获取用户有权限的门店ID列表
-        List<Long> authorizedShopIds = getAuthorizedShopIds();
-
         for (Long shopId : shopIds) {
-            // 检查门店权限
-            if (authorizedShopIds != null && !authorizedShopIds.contains(shopId)) {
-                log.warn("用户无权访问门店: {}", shopId);
-                continue;
-            }
-
             ShopInfo shop = shopInfoService.getById(shopId);
             if (shop == null) { continue; }
 
@@ -182,15 +172,7 @@ public class AnalysisController {
         // 使用 AreaStatusSnapshot 表查询，该表已包含聚合好的数据
         LambdaQueryWrapper<AreaStatusSnapshot> wrapper = new LambdaQueryWrapper<>();
         if (shopId != null) {
-            // 检查门店权限
-            List<Long> authorizedShopIds = getAuthorizedShopIds();
-            if (authorizedShopIds != null && !authorizedShopIds.contains(shopId)) {
-                return Result.success(new HashMap<>()); // 无权限返回空数据
-            }
             wrapper.eq(AreaStatusSnapshot::getShopId, shopId);
-        } else {
-            // 未指定门店时，添加数据权限过滤
-            DataScopeUtil.addDataScopeFilterByShopId(wrapper, AreaStatusSnapshot::getShopId);
         }
         wrapper.ge(AreaStatusSnapshot::getSnapshotTime, startDateTime)
               .le(AreaStatusSnapshot::getSnapshotTime, endDateTime);
@@ -325,9 +307,6 @@ public class AnalysisController {
     public Result<List<Map<String, Object>>> listShops() {
         LambdaQueryWrapper<ShopInfo> wrapper = new LambdaQueryWrapper<ShopInfo>()
                 .select(ShopInfo::getId, ShopInfo::getName);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilter(wrapper, ShopInfo::getConfigId);
 
         List<ShopInfo> shops = shopInfoService.list(wrapper);
 
@@ -339,25 +318,5 @@ public class AnalysisController {
         }).collect(Collectors.toList());
 
         return Result.success(result);
-    }
-
-    /**
-     * 获取用户有权限访问的门店ID列表
-     * @return 门店ID列表，null表示全部有权限
-     */
-    private List<Long> getAuthorizedShopIds() {
-        List<Long> configIds = DataScopeUtil.getConfigIds();
-        if (configIds == null) {
-            return null; // 全部有权限
-        }
-        if (configIds.isEmpty()) {
-            return Collections.emptyList(); // 无权限
-        }
-        // 查询用户有权限的配置下的所有门店
-        LambdaQueryWrapper<ShopInfo> wrapper = new LambdaQueryWrapper<ShopInfo>()
-                .select(ShopInfo::getId)
-                .in(ShopInfo::getConfigId, configIds);
-        List<ShopInfo> shops = shopInfoService.list(wrapper);
-        return shops.stream().map(ShopInfo::getId).collect(Collectors.toList());
     }
 }

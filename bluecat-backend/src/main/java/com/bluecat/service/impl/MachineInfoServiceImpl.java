@@ -6,19 +6,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bluecat.entity.MachineInfo;
 import com.bluecat.mapper.MachineInfoMapper;
 import com.bluecat.service.MachineInfoService;
-import com.bluecat.util.DataScopeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
 
-/**
- * 机器信息表 Service实现
- *
- * @author BlueCat
- * @since 2026-03-30
- */
 @Service
 @RequiredArgsConstructor
 public class MachineInfoServiceImpl extends ServiceImpl<MachineInfoMapper, MachineInfo> implements MachineInfoService {
@@ -31,10 +24,6 @@ public class MachineInfoServiceImpl extends ServiceImpl<MachineInfoMapper, Machi
                 .eq(StringUtils.hasText(areaName), MachineInfo::getAreaName, areaName)
                 .like(StringUtils.hasText(comName), MachineInfo::getComName, comName)
                 .orderByAsc(MachineInfo::getComName);
-        
-        // 添加数据权限过滤 - 通过shop_id关联过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
-        
         return page(page, wrapper);
     }
 
@@ -43,10 +32,6 @@ public class MachineInfoServiceImpl extends ServiceImpl<MachineInfoMapper, Machi
         LambdaQueryWrapper<MachineInfo> wrapper = new LambdaQueryWrapper<MachineInfo>()
                 .eq(MachineInfo::getShopId, shopId)
                 .orderByAsc(MachineInfo::getComName);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
-        
         return list(wrapper);
     }
 
@@ -55,10 +40,6 @@ public class MachineInfoServiceImpl extends ServiceImpl<MachineInfoMapper, Machi
         LambdaQueryWrapper<MachineInfo> wrapper = new LambdaQueryWrapper<MachineInfo>()
                 .eq(MachineInfo::getShopId, shopId)
                 .eq(MachineInfo::getComName, comName);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
-        
         return getOne(wrapper);
     }
 
@@ -67,10 +48,6 @@ public class MachineInfoServiceImpl extends ServiceImpl<MachineInfoMapper, Machi
         LambdaQueryWrapper<MachineInfo> wrapper = new LambdaQueryWrapper<MachineInfo>()
                 .eq(MachineInfo::getShopId, shopId)
                 .eq(MachineInfo::getAreaName, areaName);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
-        
         return (int) count(wrapper);
     }
 
@@ -80,10 +57,6 @@ public class MachineInfoServiceImpl extends ServiceImpl<MachineInfoMapper, Machi
                 .eq(MachineInfo::getShopId, shopId)
                 .eq(MachineInfo::getAreaName, areaName)
                 .orderByAsc(MachineInfo::getComName);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
-        
         return list(wrapper);
     }
 }

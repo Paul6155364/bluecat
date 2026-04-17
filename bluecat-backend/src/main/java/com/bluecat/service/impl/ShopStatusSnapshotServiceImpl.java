@@ -6,19 +6,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bluecat.entity.ShopStatusSnapshot;
 import com.bluecat.mapper.ShopStatusSnapshotMapper;
 import com.bluecat.service.ShopStatusSnapshotService;
-import com.bluecat.util.DataScopeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * 门店实时状态快照表 Service实现
- *
- * @author BlueCat
- * @since 2026-03-30
- */
 @Service
 @RequiredArgsConstructor
 public class ShopStatusSnapshotServiceImpl extends ServiceImpl<ShopStatusSnapshotMapper, ShopStatusSnapshot> implements ShopStatusSnapshotService {
@@ -31,10 +24,6 @@ public class ShopStatusSnapshotServiceImpl extends ServiceImpl<ShopStatusSnapsho
                 .ge(startTime != null, ShopStatusSnapshot::getSnapshotTime, startTime)
                 .le(endTime != null, ShopStatusSnapshot::getSnapshotTime, endTime)
                 .orderByDesc(ShopStatusSnapshot::getSnapshotTime);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopStatusSnapshot::getShopId);
-        
         return page(page, wrapper);
     }
 
@@ -44,10 +33,6 @@ public class ShopStatusSnapshotServiceImpl extends ServiceImpl<ShopStatusSnapsho
                 .eq(ShopStatusSnapshot::getShopId, shopId)
                 .orderByDesc(ShopStatusSnapshot::getSnapshotTime)
                 .last("LIMIT 1");
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopStatusSnapshot::getShopId);
-        
         return getOne(wrapper);
     }
 
@@ -57,10 +42,6 @@ public class ShopStatusSnapshotServiceImpl extends ServiceImpl<ShopStatusSnapsho
                 .inSql(ShopStatusSnapshot::getId, 
                         "SELECT MAX(id) FROM shop_status_snapshot GROUP BY shop_id")
                 .orderByDesc(ShopStatusSnapshot::getOccupancyRate);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopStatusSnapshot::getShopId);
-        
         return list(wrapper);
     }
 
@@ -71,10 +52,6 @@ public class ShopStatusSnapshotServiceImpl extends ServiceImpl<ShopStatusSnapsho
                 .ge(startTime != null, ShopStatusSnapshot::getSnapshotTime, startTime)
                 .le(endTime != null, ShopStatusSnapshot::getSnapshotTime, endTime)
                 .orderByAsc(ShopStatusSnapshot::getSnapshotTime);
-        
-        // 添加数据权限过滤
-        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopStatusSnapshot::getShopId);
-        
         return list(wrapper);
     }
 }
