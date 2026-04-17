@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bluecat.entity.ShopArea;
 import com.bluecat.mapper.ShopAreaMapper;
 import com.bluecat.service.ShopAreaService;
+import com.bluecat.util.DataScopeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,8 +23,13 @@ public class ShopAreaServiceImpl extends ServiceImpl<ShopAreaMapper, ShopArea> i
 
     @Override
     public List<ShopArea> listByShopId(Long shopId) {
-        return list(new LambdaQueryWrapper<ShopArea>()
+        LambdaQueryWrapper<ShopArea> wrapper = new LambdaQueryWrapper<ShopArea>()
                 .eq(ShopArea::getShopId, shopId)
-                .orderByAsc(ShopArea::getSortOrder));
+                .orderByAsc(ShopArea::getSortOrder);
+        
+        // 添加数据权限过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopArea::getShopId);
+        
+        return list(wrapper);
     }
 }

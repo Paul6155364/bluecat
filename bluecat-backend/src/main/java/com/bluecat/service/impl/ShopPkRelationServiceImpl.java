@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bluecat.entity.ShopPkRelation;
 import com.bluecat.mapper.ShopPkRelationMapper;
 import com.bluecat.service.ShopPkRelationService;
+import com.bluecat.util.DataScopeUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,9 +21,14 @@ public class ShopPkRelationServiceImpl extends ServiceImpl<ShopPkRelationMapper,
 
     @Override
     public List<ShopPkRelation> listByUserId(Long userId) {
-        return list(new LambdaQueryWrapper<ShopPkRelation>()
+        LambdaQueryWrapper<ShopPkRelation> wrapper = new LambdaQueryWrapper<ShopPkRelation>()
                 .eq(ShopPkRelation::getCreateBy, userId)
                 .eq(ShopPkRelation::getDeleted, 0)
-                .orderByDesc(ShopPkRelation::getCreateTime));
+                .orderByDesc(ShopPkRelation::getCreateTime);
+        
+        // 添加数据权限过滤 - 通过mainShopId关联过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopPkRelation::getMainShopId);
+        
+        return list(wrapper);
     }
 }

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bluecat.entity.ShopStatusSnapshot;
 import com.bluecat.mapper.ShopStatusSnapshotMapper;
 import com.bluecat.service.ShopStatusSnapshotService;
+import com.bluecat.util.DataScopeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,32 +31,50 @@ public class ShopStatusSnapshotServiceImpl extends ServiceImpl<ShopStatusSnapsho
                 .ge(startTime != null, ShopStatusSnapshot::getSnapshotTime, startTime)
                 .le(endTime != null, ShopStatusSnapshot::getSnapshotTime, endTime)
                 .orderByDesc(ShopStatusSnapshot::getSnapshotTime);
+        
+        // 添加数据权限过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopStatusSnapshot::getShopId);
+        
         return page(page, wrapper);
     }
 
     @Override
     public ShopStatusSnapshot getLatestByShopId(Long shopId) {
-        return getOne(new LambdaQueryWrapper<ShopStatusSnapshot>()
+        LambdaQueryWrapper<ShopStatusSnapshot> wrapper = new LambdaQueryWrapper<ShopStatusSnapshot>()
                 .eq(ShopStatusSnapshot::getShopId, shopId)
                 .orderByDesc(ShopStatusSnapshot::getSnapshotTime)
-                .last("LIMIT 1"));
+                .last("LIMIT 1");
+        
+        // 添加数据权限过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopStatusSnapshot::getShopId);
+        
+        return getOne(wrapper);
     }
 
     @Override
     public List<ShopStatusSnapshot> listLatestAll() {
-        // 获取每个门店最新快照的ID
-        return list(new LambdaQueryWrapper<ShopStatusSnapshot>()
+        LambdaQueryWrapper<ShopStatusSnapshot> wrapper = new LambdaQueryWrapper<ShopStatusSnapshot>()
                 .inSql(ShopStatusSnapshot::getId, 
                         "SELECT MAX(id) FROM shop_status_snapshot GROUP BY shop_id")
-                .orderByDesc(ShopStatusSnapshot::getOccupancyRate));
+                .orderByDesc(ShopStatusSnapshot::getOccupancyRate);
+        
+        // 添加数据权限过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopStatusSnapshot::getShopId);
+        
+        return list(wrapper);
     }
 
     @Override
     public List<ShopStatusSnapshot> listByShopIdAndTimeRange(Long shopId, LocalDateTime startTime, LocalDateTime endTime) {
-        return list(new LambdaQueryWrapper<ShopStatusSnapshot>()
+        LambdaQueryWrapper<ShopStatusSnapshot> wrapper = new LambdaQueryWrapper<ShopStatusSnapshot>()
                 .eq(ShopStatusSnapshot::getShopId, shopId)
                 .ge(startTime != null, ShopStatusSnapshot::getSnapshotTime, startTime)
                 .le(endTime != null, ShopStatusSnapshot::getSnapshotTime, endTime)
-                .orderByAsc(ShopStatusSnapshot::getSnapshotTime));
+                .orderByAsc(ShopStatusSnapshot::getSnapshotTime);
+        
+        // 添加数据权限过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, ShopStatusSnapshot::getShopId);
+        
+        return list(wrapper);
     }
 }

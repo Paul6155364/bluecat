@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bluecat.entity.MachineInfo;
 import com.bluecat.mapper.MachineInfoMapper;
 import com.bluecat.service.MachineInfoService;
+import com.bluecat.util.DataScopeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -30,35 +31,59 @@ public class MachineInfoServiceImpl extends ServiceImpl<MachineInfoMapper, Machi
                 .eq(StringUtils.hasText(areaName), MachineInfo::getAreaName, areaName)
                 .like(StringUtils.hasText(comName), MachineInfo::getComName, comName)
                 .orderByAsc(MachineInfo::getComName);
+        
+        // 添加数据权限过滤 - 通过shop_id关联过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
+        
         return page(page, wrapper);
     }
 
     @Override
     public List<MachineInfo> listByShopId(Long shopId) {
-        return list(new LambdaQueryWrapper<MachineInfo>()
+        LambdaQueryWrapper<MachineInfo> wrapper = new LambdaQueryWrapper<MachineInfo>()
                 .eq(MachineInfo::getShopId, shopId)
-                .orderByAsc(MachineInfo::getComName));
+                .orderByAsc(MachineInfo::getComName);
+        
+        // 添加数据权限过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
+        
+        return list(wrapper);
     }
 
     @Override
     public MachineInfo getByShopIdAndComName(Long shopId, String comName) {
-        return getOne(new LambdaQueryWrapper<MachineInfo>()
+        LambdaQueryWrapper<MachineInfo> wrapper = new LambdaQueryWrapper<MachineInfo>()
                 .eq(MachineInfo::getShopId, shopId)
-                .eq(MachineInfo::getComName, comName));
+                .eq(MachineInfo::getComName, comName);
+        
+        // 添加数据权限过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
+        
+        return getOne(wrapper);
     }
 
     @Override
     public int countByShopIdAndAreaName(Long shopId, String areaName) {
-        return (int) count(new LambdaQueryWrapper<MachineInfo>()
+        LambdaQueryWrapper<MachineInfo> wrapper = new LambdaQueryWrapper<MachineInfo>()
                 .eq(MachineInfo::getShopId, shopId)
-                .eq(MachineInfo::getAreaName, areaName));
+                .eq(MachineInfo::getAreaName, areaName);
+        
+        // 添加数据权限过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
+        
+        return (int) count(wrapper);
     }
 
     @Override
     public List<MachineInfo> listByShopIdAndAreaName(Long shopId, String areaName) {
-        return list(new LambdaQueryWrapper<MachineInfo>()
+        LambdaQueryWrapper<MachineInfo> wrapper = new LambdaQueryWrapper<MachineInfo>()
                 .eq(MachineInfo::getShopId, shopId)
                 .eq(MachineInfo::getAreaName, areaName)
-                .orderByAsc(MachineInfo::getComName));
+                .orderByAsc(MachineInfo::getComName);
+        
+        // 添加数据权限过滤
+        DataScopeUtil.addDataScopeFilterByShopId(wrapper, MachineInfo::getShopId);
+        
+        return list(wrapper);
     }
 }

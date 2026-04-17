@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bluecat.entity.DataCollectionTask;
 import com.bluecat.mapper.DataCollectionTaskMapper;
 import com.bluecat.service.DataCollectionTaskService;
+import com.bluecat.util.DataScopeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -28,6 +29,10 @@ public class DataCollectionTaskServiceImpl extends ServiceImpl<DataCollectionTas
                 .eq(StringUtils.hasText(taskType), DataCollectionTask::getTaskType, taskType)
                 .eq(status != null, DataCollectionTask::getStatus, status)
                 .orderByDesc(DataCollectionTask::getCreateTime);
+        
+        // 添加数据权限过滤 - 按config_id过滤
+        DataScopeUtil.addDataScopeFilter(wrapper, DataCollectionTask::getConfigId);
+        
         return page(page, wrapper);
     }
 }

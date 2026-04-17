@@ -8,6 +8,7 @@ import com.bluecat.dto.LoginResultDTO;
 import com.bluecat.dto.MenuTreeDTO;
 import com.bluecat.entity.SysRole;
 import com.bluecat.entity.SysUser;
+import com.bluecat.service.SysLoginLogService;
 import com.bluecat.service.SysMenuService;
 import com.bluecat.service.SysRoleService;
 import com.bluecat.service.SysUserService;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -38,26 +40,37 @@ public class AuthController {
     private final SysRoleService sysRoleService;
     private final SysMenuService sysMenuService;
     private final SysUserConfigService sysUserConfigService;
+    private final SysLoginLogService sysLoginLogService;
 
     @ApiOperation("登录")
     @PostMapping("/login")
-    public Result<LoginResultDTO> login(@RequestBody java.util.Map<String, String> params) {
+    public Result<LoginResultDTO> login(@RequestBody java.util.Map<String, String> params, 
+                                        HttpServletRequest request) {
         String username = params.get("username");
         String password = params.get("password");
+        String ip = getClientIp(request);
+        String browser = getBrowser(request);
+        String os = getOs(request);
 
         // 查询用户
         SysUser user = sysUserService.getByUsername(username);
         if (user == null) {
+            // 记录登录失败日志
+            sysLoginLogService.recordLoginLog(null, username, null, ip, browser, os, 0, "用户不存在");
             throw new BusinessException("用户名或密码错误");
         }
 
         // 验证密码
         if (!BCrypt.checkpw(password, user.getPassword())) {
+            // 记录登录失败日志
+            sysLoginLogService.recordLoginLog(user.getId(), username, user.getRealName(), ip, browser, os, 0, "密码错误");
             throw new BusinessException("用户名或密码错误");
         }
 
         // 检查状态
         if (user.getStatus() == 0) {
+            // 记录登录失败日志
+            sysLoginLogService.recordLoginLog(user.getId(), username, user.getRealName(), ip, browser, os, 0, "账号已被禁用");
             throw new BusinessException("账号已被禁用");
         }
 
@@ -66,8 +79,11 @@ public class AuthController {
 
         // 更新最后登录信息
         user.setLastLoginTime(LocalDateTime.now());
-        user.setLastLoginIp(params.get("ip"));
+        user.setLastLoginIp(ip);
         sysUserService.updateById(user);
+
+        // 记录登录成功日志
+        sysLoginLogService.recordLoginLog(user.getId(), username, user.getRealName(), ip, browser, os, 1, "登录成功");
 
         // 清除密码
         user.setPassword(null);
@@ -139,5 +155,80 @@ public class AuthController {
         result.setConfigIdList(configIdList);
 
         return Result.success(result);
+    }
+
+    /**
+     * 获取客户端IP
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        // 多个代理时取第一个IP
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
+    }
+
+    /**
+     * 获取浏览器信息
+     */
+    private String getBrowser(HttpServletRequest request) {
+        String userAgent = request.getHeader("User-Agent");
+        if (userAgent == null) {
+            return "未知";
+        }
+        userAgent = userAgent.toLowerCase();
+        if (userAgent.contains("edge")) {
+            return "Edge";
+        } else if (userAgent.contains("chrome")) {
+            return "Chrome";
+        } else if (userAgent.contains("firefox")) {
+            return "Firefox";
+        } else if (userAgent.contains("safari")) {
+            return "Safari";
+        } else if (userAgent.contains("opera") || userAgent.contains("opr")) {
+            return "Opera";
+        } else if (userAgent.contains("msie") || userAgent.contains("trident")) {
+            return "IE";
+        }
+        return "其他";
+    }
+
+    /**
+     * 获取操作系统信息
+     */
+    private String getOs(HttpServletRequest request) {
+        String userAgent = request.getHeader("User-Agent");
+        if (userAgent == null) {
+            return "未知";
+        }
+        userAgent = userAgent.toLowerCase();
+        if (userAgent.contains("windows")) {
+            return "Windows";
+        } else if (userAgent.contains("mac")) {
+            return "Mac OS";
+        } else if (userAgent.contains("linux")) {
+            return "Linux";
+        } else if (userAgent.contains("android")) {
+            return "Android";
+        } else if (userAgent.contains("iphone") || userAgent.contains("ipad")) {
+            return "iOS";
+        }
+        return "其他";
     }
 }
