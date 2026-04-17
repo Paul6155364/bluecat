@@ -1,0 +1,65 @@
+# ====================
+# 前端 (Vue/React)
+# ====================
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist.zip
+**/dist.zip
+.npm/
+.vite/
+**/.vite/
+
+# 前端环境变量
+.env.local
+.env.*.local
+
+# ====================
+# 后端 (Java/Maven)
+# ====================
+**/target/
+**/classes/
+**/test-classes/
+*.jar
+*.war
+*.ear
+*.class
+
+# Maven 日志
+**/mvnw
+**/mvnw.cmd
+**/.mvn/
+
+# ====================
+# IDE 配置
+# ====================
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.DS_Store
+
+# ====================
+# 日志文件
+# ====================
+logs/
+**/logs/
+*.log
+
+# ====================
+# 系统文件
+# ====================
+Thumbs.db
+.DS_Store
+
+# ====================
+# 其他临时文件
+# ====================
+*.zip
+*.tar
+*.gz
+tmp/
+**/tmp/
