@@ -36,7 +36,8 @@ public class ShopConfigServiceImpl extends ServiceImpl<ShopConfigMapper, ShopCon
     @Override
     public List<ShopConfig> listEnabled() {
         LambdaQueryWrapper<ShopConfig> wrapper = new LambdaQueryWrapper<ShopConfig>()
-                .eq(ShopConfig::getStatus, 1);
+                .eq(ShopConfig::getStatus, 1)
+                .eq(ShopConfig::getPlatformType, 0);
         return list(wrapper);
     }
 }

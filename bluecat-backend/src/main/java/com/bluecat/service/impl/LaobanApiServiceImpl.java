@@ -317,6 +317,422 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             }
         }
     }
+
+    // ========== 银杏管家采集方法 ==========
+
+    @Override
+    public List<Map<String, Object>> getYinxingShopList(ShopConfig config) {
+        // 银杏管家门店列表: GET /default/chains?name=recharge&chain_id=xxx
+        String url = "https://" + yinxingHost + "/default/chains?name=recharge&chain_id=" + config.getSnbid();
+        Map<String, Object> response = callYinxingApi(config, url, "yinxing-chains", null, HttpMethod.GET);
+        if (response != null && response.containsKey("data")) {
+            Object data = response.get("data");
+            if (data instanceof List) {
+                return (List<Map<String, Object>>) data;
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    @Override
+    public Map<String, Object> getYinxingShopDetail(ShopConfig config, String chainId) {
+        // 银杏管家门店详情: GET /default/index?chain_id=xxx
+        String url = "https://" + yinxingHost + "/default/index?chain_id=" + chainId;
+        Map<String, Object> response = callYinxingApi(config, url, "yinxing-index", null, HttpMethod.GET);
+        if (response != null && response.containsKey("data")) {
+            return (Map<String, Object>) response.get("data");
+        }
+        return new HashMap<>();
+    }
+
+    @Override
+    public List<Map<String, Object>> getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId) {
+        // 银杏管家舱位信息: GET /dingzuo/item
+        String url = "https://" + yinxingHost + "/dingzuo/item";
+        Map<String, Object> response = callYinxingApi(config, url, "yinxing-dingzuo-item", null, HttpMethod.GET);
+        if (response != null && response.containsKey("data")) {
+            Object data = response.get("data");
+            if (data instanceof List) {
+                return (List<Map<String, Object>>) data;
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    @Override
+    @Async("collectionExecutor")
+    public void executeYinxingCollection(Long configId) {
+        log.info("开始银杏管家采集任务: configId={}", configId);
+
+        ShopConfig config = shopConfigService.getById(configId);
+        if (config == null || config.getStatus() != 1 || config.getPlatformType() != 1) {
+            log.warn("配置不存在、已禁用或非银杏管家配置: configId={}", configId);
+            return;
+        }
+
+        LocalDateTime startTime = LocalDateTime.now();
+        DataCollectionTask task = createTask(configId, null, "YINXING_SHOP_LIST");
+
+        try {
+            // 1. 获取银杏管家门店列表
+            List<Map<String, Object>> shopList = getYinxingShopList(config);
+            log.info("银杏管家门店列表: configId={}, count={}", configId, shopList.size());
+
+            // 2. 遍历门店采集数据
+            for (Map<String, Object> shopData : shopList) {
+                String chainId = getString(shopData, "id");
+                if (chainId == null || chainId.isEmpty()) {
+                    continue;
+                }
+
+                // 获取门店详情
+                Map<String, Object> detailData = getYinxingShopDetail(config, chainId);
+                if (detailData.isEmpty()) {
+                    log.warn("获取门店详情失败: chainId={}", chainId);
+                    continue;
+                }
+
+                // 保存或更新门店
+                ShopInfo shop = saveYinxingShopInfo(config, chainId, detailData);
+                if (shop == null) {
+                    continue;
+                }
+
+                // 获取舱位/机器信息并保存快照
+                List<Map<String, Object>> roomList = getYinxingRoomInfo(config, null, chainId);
+                if (!roomList.isEmpty()) {
+                    // 保存舱位、机器信息和状态快照
+                    saveYinxingWithSnapshot(shop, roomList, task.getId());
+                }
+
+                // 随机延迟1-3秒
+                randomDelay(1000, 3000);
+            }
+
+            finishTask(task, TaskStatus.SUCCESS, startTime);
+            log.info("银杏管家采集任务完成: configId={}", configId);
+        } catch (Exception e) {
+            log.error("银杏管家数据采集失败: configId={}", configId, e);
+            finishTask(task, TaskStatus.FAILED, startTime, e.getMessage());
+        }
+    }
+
+    @Override
+    @Async("collectionExecutor")
+    public void executeAllYinxingCollection() {
+        log.info("开始执行所有银杏管家采集任务");
+
+        // 查询所有银杏管家配置
+        LambdaQueryWrapper<ShopConfig> wrapper = new LambdaQueryWrapper<ShopConfig>()
+                .eq(ShopConfig::getStatus, 1)
+                .eq(ShopConfig::getPlatformType, 1);
+        List<ShopConfig> configs = shopConfigService.list(wrapper);
+
+        for (ShopConfig config : configs) {
+            try {
+                self.executeYinxingCollection(config.getId());
+                randomDelay(3000, 5000);
+            } catch (Exception e) {
+                log.error("银杏管家采集失败: configId={}", config.getId(), e);
+            }
+        }
+    }
+
+    /**
+     * 保存银杏管家门店信息
+     */
+    private ShopInfo saveYinxingShopInfo(ShopConfig config, String chainId, Map<String, Object> detailData) {
+        ShopInfo shop = shopInfoService.getBySnbid(chainId);
+        if (shop == null) {
+            shop = new ShopInfo();
+            shop.setConfigId(config.getId());
+            shop.setSnbid(chainId);
+        }
+
+        // 银杏管家字段映射
+        shop.setName(getString(detailData, "mch_name"));           // 门店名称
+        shop.setAddress(getString(detailData, "mch_ext.addr"));     // 地址
+        shop.setProvinceName(getString(detailData, "province_name")); // 省份
+        shop.setCityName(getString(detailData, "city_name"));       // 城市
+        shop.setZoneName(getString(detailData, "region_name"));     // 区县
+        shop.setLongitude(getBigDecimal(detailData, "lng"));       // 经度
+        shop.setLatitude(getBigDecimal(detailData, "lat"));        // 纬度
+        shop.setShopId(getLong(detailData, "mch_id"));              // 商户ID
+
+        // 设置原始数据
+        shop.setRawJson(detailData);
+
+        if (shop.getId() == null) {
+            shopInfoService.save(shop);
+        } else {
+            shopInfoService.updateById(shop);
+        }
+        log.debug("保存银杏管家门店: chainId={}, name={}", chainId, shop.getName());
+        return shop;
+    }
+
+    /**
+     * 保存银杏管家舱位/机器信息（带状态快照）
+     * 银杏管家结构: id, name, type, on_machine[], off_machine[], fee, bj_machine[]
+     */
+    private void saveYinxingWithSnapshot(ShopInfo shop, List<Map<String, Object>> roomList, Long taskId) {
+        LocalDateTime snapshotTime = LocalDateTime.now();
+
+        // 创建门店快照
+        ShopStatusSnapshot snapshot = new ShopStatusSnapshot();
+        snapshot.setTaskId(taskId);
+        snapshot.setShopId(shop.getId());
+        snapshot.setSnapshotTime(snapshotTime);
+        snapshot.setRawJson(roomList);
+        shopStatusSnapshotService.save(snapshot);
+
+        int totalMachines = 0;
+        int freeMachines = 0;
+        int busyMachines = 0;
+
+        // 遍历舱位
+        for (Map<String, Object> roomData : roomList) {
+            String roomName = getString(roomData, "name");
+            if (roomName == null || roomName.isEmpty()) {
+                continue;
+            }
+
+            // 创建或更新区域
+            ShopArea area = shopAreaMapper.selectOne(new LambdaQueryWrapper<ShopArea>()
+                    .eq(ShopArea::getShopId, shop.getId())
+                    .eq(ShopArea::getAreaName, roomName));
+            if (area == null) {
+                area = new ShopArea();
+                area.setShopId(shop.getId());
+                area.setAreaName(roomName);
+                area.setAllow(1);
+                shopAreaService.save(area);
+            }
+
+            // 获取空闲和占用机器列表
+            List<String> onMachines = getStringList(roomData, "on_machine");  // 占用中
+            List<String> offMachines = getStringList(roomData, "off_machine"); // 空闲
+
+            int areaTotal = onMachines.size() + offMachines.size();
+            int areaFree = offMachines.size();
+            int areaBusy = onMachines.size();
+
+            totalMachines += areaTotal;
+            freeMachines += areaFree;
+            busyMachines += areaBusy;
+
+            // 保存机器信息
+            Set<String> allMachines = new HashSet<>();
+            allMachines.addAll(onMachines);
+            allMachines.addAll(offMachines);
+
+            for (String comName : allMachines) {
+                MachineInfo machine = machineInfoService.getByShopIdAndComName(shop.getId(), comName);
+                if (machine == null) {
+                    machine = new MachineInfo();
+                    machine.setShopId(shop.getId());
+                    machine.setComName(comName);
+                }
+                machine.setAreaId(area.getId());
+                machine.setAreaName(roomName);
+
+                if (machine.getId() == null) {
+                    machineInfoService.save(machine);
+                } else {
+                    machineInfoService.updateById(machine);
+                }
+
+                // 保存机器状态历史
+                MachineStatusHistory history = new MachineStatusHistory();
+                history.setSnapshotId(snapshot.getId());
+                history.setTaskId(taskId);
+                history.setShopId(shop.getId());
+                history.setMachineId(machine.getId());
+                history.setComName(comName);
+                history.setAreaName(roomName);
+                // 空闲 = 1, 占用 = 0
+                history.setStatus(offMachines.contains(comName) ? 1 : 0);
+                history.setSnapshotTime(snapshotTime);
+                machineStatusHistoryService.save(history);
+            }
+
+            // 创建区域快照
+            AreaStatusSnapshot areaSnapshot = new AreaStatusSnapshot();
+            areaSnapshot.setTaskId(taskId);
+            areaSnapshot.setSnapshotId(snapshot.getId());
+            areaSnapshot.setShopId(shop.getId());
+            areaSnapshot.setAreaName(roomName);
+            areaSnapshot.setTotalMachines(areaTotal);
+            areaSnapshot.setFreeMachines(areaFree);
+            areaSnapshot.setBusyMachines(areaBusy);
+            areaSnapshot.setFreeMachineList(offMachines);
+            areaSnapshot.setSnapshotTime(snapshotTime);
+
+            if (areaTotal > 0) {
+                BigDecimal rate = BigDecimal.valueOf(areaBusy)
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(BigDecimal.valueOf(areaTotal), 2, RoundingMode.HALF_UP);
+                areaSnapshot.setOccupancyRate(rate);
+            }
+            areaStatusSnapshotService.save(areaSnapshot);
+        }
+
+        // 更新门店快照统计
+        snapshot.setTotalMachines(totalMachines);
+        snapshot.setFreeMachines(freeMachines);
+        snapshot.setBusyMachines(busyMachines);
+        if (totalMachines > 0) {
+            BigDecimal rate = BigDecimal.valueOf(busyMachines)
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(BigDecimal.valueOf(totalMachines), 2, RoundingMode.HALF_UP);
+            snapshot.setOccupancyRate(rate);
+        }
+        shopStatusSnapshotService.updateById(snapshot);
+
+        log.info("保存银杏管家状态快照: shopId={}, total={}, free={}, busy={}",
+                shop.getId(), totalMachines, freeMachines, busyMachines);
+    }
+
+    /**
+     * 保存银杏管家舱位/机器信息（兼容旧方法，无快照）
+     */
+    private void saveYinxingRoomInfo(Long shopId, List<Map<String, Object>> roomList) {
+        for (Map<String, Object> roomData : roomList) {
+            String roomName = getString(roomData, "name");
+            if (roomName == null || roomName.isEmpty()) {
+                continue;
+            }
+
+            // 创建或更新区域
+            ShopArea area = shopAreaMapper.selectOne(new LambdaQueryWrapper<ShopArea>()
+                    .eq(ShopArea::getShopId, shopId)
+                    .eq(ShopArea::getAreaName, roomName));
+            if (area == null) {
+                area = new ShopArea();
+                area.setShopId(shopId);
+                area.setAreaName(roomName);
+                area.setAllow(1);
+                shopAreaService.save(area);
+            }
+
+            // 处理在用机器 on_machine[]
+            List<String> onMachines = getStringList(roomData, "on_machine");
+            for (String comName : onMachines) {
+                saveYinxingMachine(shopId, area.getId(), roomName, comName);
+            }
+
+            // 处理空闲机器 off_machine[]
+            List<String> offMachines = getStringList(roomData, "off_machine");
+            for (String comName : offMachines) {
+                saveYinxingMachine(shopId, area.getId(), roomName, comName);
+            }
+        }
+    }
+
+    private void saveYinxingMachine(Long shopId, Long areaId, String areaName, String comName) {
+        if (comName == null || comName.isEmpty()) {
+            return;
+        }
+
+        MachineInfo machine = machineInfoService.getByShopIdAndComName(shopId, comName);
+        if (machine == null) {
+            machine = new MachineInfo();
+            machine.setShopId(shopId);
+            machine.setComName(comName);
+        }
+        machine.setAreaId(areaId);
+        machine.setAreaName(areaName);
+
+        if (machine.getId() == null) {
+            machineInfoService.save(machine);
+        } else {
+            machineInfoService.updateById(machine);
+        }
+    }
+
+    /**
+     * 调用银杏管家API
+     */
+    private Map<String, Object> callYinxingApi(ShopConfig config, String url, String apiName, Long shopId, HttpMethod method) {
+        long start = System.currentTimeMillis();
+        ApiCallLog logEntry = new ApiCallLog();
+        logEntry.setConfigId(config.getId());
+        logEntry.setShopId(shopId);
+        logEntry.setApiName(apiName);
+        logEntry.setApiUrl(url);
+        logEntry.setRequestMethod(method.name());
+        logEntry.setCallTime(LocalDateTime.now());
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.set("Host", yinxingHost);
+            headers.set("User-Agent", yinxingUserAgent);
+            headers.set("Accept", "application/json, text/javascript, */*; q=0.01");
+            headers.set("X-Requested-With", "XMLHttpRequest");
+            headers.set("Sec-Fetch-Site", "same-origin");
+            headers.set("Sec-Fetch-Mode", "cors");
+            headers.set("Sec-Fetch-Dest", "empty");
+            headers.set("Referer", yinxingReferer);
+            headers.set("Accept-Language", "zh-CN,zh;q=0.9");
+            headers.set("Priority", "u=1, i");
+
+            // 设置 Cookie
+            StringBuilder cookieBuilder = new StringBuilder();
+            cookieBuilder.append("chain-id=").append(config.getSnbid());
+
+            if (config.getCookie() != null && !config.getCookie().isEmpty()) {
+                String configCookie = config.getCookie();
+                if (configCookie.contains("HMACCOUNT=")) {
+                    int startIdx = configCookie.indexOf("HMACCOUNT=");
+                    int endIdx = configCookie.indexOf(";", startIdx);
+                    if (endIdx == -1) endIdx = configCookie.length();
+                    String hmAccount = configCookie.substring(startIdx, endIdx);
+                    cookieBuilder.append("; ").append(hmAccount);
+                }
+                if (configCookie.contains("chain=")) {
+                    int startIdx = configCookie.indexOf("chain=");
+                    int endIdx = configCookie.indexOf(";", startIdx);
+                    if (endIdx == -1) endIdx = configCookie.length();
+                    String chain = configCookie.substring(startIdx, endIdx);
+                    cookieBuilder.append("; ").append(chain);
+                }
+            }
+            headers.set("Cookie", cookieBuilder.toString());
+
+            logEntry.setRequestHeaders(headers);
+
+            HttpEntity<String> entity = new HttpEntity<>(null, headers);
+            ResponseEntity<Map> response = restTemplate.exchange(url, method, entity, Map.class);
+
+            logEntry.setResponseCode(response.getStatusCodeValue());
+            logEntry.setResponseBody(response.getBody());
+            logEntry.setStatus(1);
+            logEntry.setDurationMs((int) (System.currentTimeMillis() - start));
+
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("银杏管家API调用失败: {}", apiName, e);
+            logEntry.setStatus(0);
+            logEntry.setErrorMsg(e.getMessage());
+            logEntry.setDurationMs((int) (System.currentTimeMillis() - start));
+
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("code", -1);
+            errorResult.put("msg", e.getMessage());
+            return errorResult;
+        } finally {
+            apiCallLogService.saveAsync(logEntry);
+        }
+    }
+
+    private List<String> getStringList(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof List) {
+            return (List<String>) value;
+        }
+        return new ArrayList<>();
+    }
     
     /**
      * 在独立事务中保存门店列表

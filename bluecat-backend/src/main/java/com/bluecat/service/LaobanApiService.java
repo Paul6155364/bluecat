@@ -76,4 +76,43 @@ public interface LaobanApiService {
      * @return 测试结果
      */
     Map<String, Object> testYinxing(ShopConfig config);
+
+    /**
+     * 银杏管家-获取门店列表
+     *
+     * @param config 网吧配置
+     * @return 门店列表
+     */
+    List<Map<String, Object>> getYinxingShopList(ShopConfig config);
+
+    /**
+     * 银杏管家-获取门店详情
+     *
+     * @param config  网吧配置
+     * @param chainId 门店chain_id
+     * @return 门店详情
+     */
+    Map<String, Object> getYinxingShopDetail(ShopConfig config, String chainId);
+
+    /**
+     * 银杏管家-获取舱位机器信息
+     *
+     * @param config  网吧配置
+     * @param shopId  门店ID
+     * @param chainId 门店chain_id
+     * @return 舱位机器信息
+     */
+    List<Map<String, Object>> getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId);
+
+    /**
+     * 银杏管家-执行采集任务
+     *
+     * @param configId 网吧配置ID
+     */
+    void executeYinxingCollection(Long configId);
+
+    /**
+     * 银杏管家-执行所有银杏管家配置的采集
+     */
+    void executeAllYinxingCollection();
 }
