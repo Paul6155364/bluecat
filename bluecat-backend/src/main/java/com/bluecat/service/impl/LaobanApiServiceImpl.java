@@ -61,6 +61,7 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     private final ShopStatusSnapshotService shopStatusSnapshotService;
     private final AreaStatusSnapshotService areaStatusSnapshotService;
     private final MachineStatusHistoryService machineStatusHistoryService;
+    private final AreaFeeSnapshotService areaFeeSnapshotService;
     private final ApiCallLogService apiCallLogService;
     private final ShopImageService shopImageService;
 
@@ -68,6 +69,7 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     private final ShopAreaMapper shopAreaMapper;
     private final MachineInfoMapper machineInfoMapper;
     private final ShopImageMapper shopImageMapper;
+    private final ShopStatusSnapshotMapper shopStatusSnapshotMapper;
     
     private final TransactionTemplate transactionTemplate;
     
@@ -562,10 +564,18 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             }
         }
 
+        // 解析区域费用数据 - API返回的是 areaFeeList，包含各区域的费率信息
+        saveAreaFeeSnapshots(snapshot.getId(), shopId, statusData);
+
+        // 更新今日累计营收
+        BigDecimal todayRevenue = shopStatusSnapshotMapper.getTodayRevenueByShopId(shopId);
+        shopStatusSnapshotMapper.updateDayRevenueByShopId(shopId, todayRevenue);
+
         // 更新门店快照统计
         snapshot.setTotalMachines(totalMachines);
         snapshot.setFreeMachines(freeMachines);
         snapshot.setBusyMachines(busyMachines);
+        snapshot.setRemain(getBigDecimal(statusData, "remain"));
         if (totalMachines > 0) {
             BigDecimal rate = BigDecimal.valueOf(busyMachines)
                     .multiply(BigDecimal.valueOf(100))
@@ -573,6 +583,32 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             snapshot.setOccupancyRate(rate);
         }
         shopStatusSnapshotService.updateById(snapshot);
+    }
+
+    /**
+     * 保存区域费用快照
+     */
+    private void saveAreaFeeSnapshots(Long snapshotId, Long shopId, Map<String, Object> statusData) {
+        List<Map<String, Object>> areaFeeList = (List<Map<String, Object>>) statusData.get("areaFeeList");
+        if (areaFeeList == null || areaFeeList.isEmpty()) {
+            return;
+        }
+
+        for (Map<String, Object> feeData : areaFeeList) {
+            AreaFeeSnapshot feeSnapshot = new AreaFeeSnapshot();
+            feeSnapshot.setSnapshotId(snapshotId);
+            feeSnapshot.setShopId(shopId);
+            feeSnapshot.setAreaName(getString(feeData, "areaDesc"));
+            feeSnapshot.setVipRoom(getInteger(feeData, "viproom"));
+            feeSnapshot.setTotalSeats(getInteger(feeData, "totalSeats"));
+            feeSnapshot.setIsSingleUp(getInteger(feeData, "isSingleUp"));
+            feeSnapshot.setRate(getBigDecimal(feeData, "rate"));
+            feeSnapshot.setEstimateFee(getBigDecimal(feeData, "estimateFee"));
+            feeSnapshot.setUnitRate(getBigDecimal(feeData, "unitRate"));
+            feeSnapshot.setWhole(getInteger(feeData, "whole"));
+            areaFeeSnapshotService.save(feeSnapshot);
+        }
+        log.info("保存区域费用快照: snapshotId={}, shopId={}, count={}", snapshotId, shopId, areaFeeList.size());
     }
 
     /**

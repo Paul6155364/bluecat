@@ -52,6 +52,9 @@ public class ShopStatusSnapshot implements Serializable {
     @ApiModelProperty("剩余时长")
     private BigDecimal remain;
 
+    @ApiModelProperty("今日累计营收(元)")
+    private BigDecimal dayRevenue;
+
     @ApiModelProperty("原始JSON")
     @TableField(typeHandler = com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler.class)
     private Object rawJson;

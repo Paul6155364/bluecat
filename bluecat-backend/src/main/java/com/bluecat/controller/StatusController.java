@@ -3,10 +3,12 @@ package com.bluecat.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bluecat.common.PageResult;
 import com.bluecat.common.Result;
+import com.bluecat.entity.AreaFeeSnapshot;
 import com.bluecat.entity.AreaStatusSnapshot;
 import com.bluecat.entity.MachineStatusHistory;
 import com.bluecat.entity.ShopConfig;
 import com.bluecat.entity.ShopStatusSnapshot;
+import com.bluecat.service.AreaFeeSnapshotService;
 import com.bluecat.service.AreaStatusSnapshotService;
 import com.bluecat.service.MachineStatusHistoryService;
 import com.bluecat.service.ShopConfigService;
@@ -40,6 +42,7 @@ public class StatusController {
 
     private final ShopStatusSnapshotService shopStatusSnapshotService;
     private final AreaStatusSnapshotService areaStatusSnapshotService;
+    private final AreaFeeSnapshotService areaFeeSnapshotService;
     private final MachineStatusHistoryService machineStatusHistoryService;
     private final ShopInfoService shopInfoService;
     private final ShopConfigService shopConfigService;
@@ -74,6 +77,23 @@ public class StatusController {
             item.put("freeMachines", snapshot.getFreeMachines());
             item.put("busyMachines", snapshot.getBusyMachines());
             item.put("occupancyRate", snapshot.getOccupancyRate());
+            item.put("remain", snapshot.getRemain());
+            item.put("dayRevenue", snapshot.getDayRevenue());
+            // 费用摘要：最低费率、最高费率、区域费用列表
+            List<AreaFeeSnapshot> feeList = areaFeeSnapshotService.listBySnapshotId(snapshot.getId());
+            item.put("areaFeeList", feeList);
+            if (!feeList.isEmpty()) {
+                java.math.BigDecimal minRate = feeList.stream()
+                        .map(AreaFeeSnapshot::getRate)
+                        .filter(r -> r != null)
+                        .min(java.math.BigDecimal::compareTo).orElse(null);
+                java.math.BigDecimal maxRate = feeList.stream()
+                        .map(AreaFeeSnapshot::getRate)
+                        .filter(r -> r != null)
+                        .max(java.math.BigDecimal::compareTo).orElse(null);
+                item.put("minRate", minRate);
+                item.put("maxRate", maxRate);
+            }
             item.put("shop", shop);
             result.add(item);
         }
@@ -96,6 +116,9 @@ public class StatusController {
         if (snapshot != null) {
             List<AreaStatusSnapshot> areas = areaStatusSnapshotService.listBySnapshotId(snapshot.getId());
             result.put("areas", areas);
+            // 区域费用
+            List<AreaFeeSnapshot> feeList = areaFeeSnapshotService.listBySnapshotId(snapshot.getId());
+            result.put("areaFeeList", feeList);
         }
         
         return Result.success(result);
@@ -160,6 +183,8 @@ public class StatusController {
             result.put("areas", areaStatusSnapshotService.listBySnapshotId(snapshotId));
             // 机器状态
             result.put("machines", machineStatusHistoryService.listBySnapshotId(snapshotId));
+            // 区域费用
+            result.put("areaFeeList", areaFeeSnapshotService.listBySnapshotId(snapshotId));
         }
         
         return Result.success(result);
