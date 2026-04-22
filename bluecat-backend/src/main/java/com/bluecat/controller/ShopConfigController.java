@@ -72,6 +72,25 @@ public class ShopConfigController {
         return Result.error("Token测试失败，请检查网络或配置");
     }
 
+    @ApiOperation("银杏管家-测试连接")
+    @PostMapping("/test-yinxing/{id}")
+    public Result<Map<String, Object>> testYinxing(@PathVariable Long id) {
+        ShopConfig config = shopConfigService.getById(id);
+        if (config == null) {
+            return Result.error("配置不存在");
+        }
+        Map<String, Object> result = laobanApiService.testYinxing(config);
+        if (result != null && result.get("code") != null) {
+            Integer code = (Integer) result.get("code");
+            if (code == 0) {
+                return Result.success("连接成功", result);
+            } else {
+                return Result.error(401, "连接失败: " + result.get("msg"));
+            }
+        }
+        return Result.error("连接失败，请检查网络或配置");
+    }
+
     @ApiOperation("刷新Token")
     @PostMapping("/refresh-token/{id}")
     public Result<Void> refreshToken(@PathVariable Long id) {

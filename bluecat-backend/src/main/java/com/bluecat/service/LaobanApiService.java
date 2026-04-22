@@ -68,4 +68,12 @@ public interface LaobanApiService {
      * @return 新的Token，如果刷新失败返回null
      */
     String refreshToken(ShopConfig config);
+
+    /**
+     * 银杏管家-测试连接
+     *
+     * @param config 网吧配置
+     * @return 测试结果
+     */
+    Map<String, Object> testYinxing(ShopConfig config);
 }

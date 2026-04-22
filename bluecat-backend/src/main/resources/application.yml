@@ -131,6 +131,11 @@ bluecat:
     base-url-user: https://xmp.54laoban.cn/api/service-app-wechat/client-c/wechat/mp/user
     base-url-book: https://xmp.54laoban.cn/api/service-value-added/client-c/book/seat
     base-url-member: https://api.wxdesk.com/api-user/client/user_c/wechatmp
+    # 银杏管家API配置
+    yinxing-base-url: https://chain24819.tmwanba.com
+    yinxing-host: chain24819.tmwanba.com
+    yinxing-user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) MacWechat/3.8.7(0x13080712) UnifiedPCMacWechat(0xf2641702) XWEB/18788 Flue
+    yinxing-referer: https://chain24819.tmwanba.com/release209/
     app-id: 2AXEDBKW3NRC
     default-headers:
       Host: xmp.54laoban.cn

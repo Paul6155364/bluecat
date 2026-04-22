@@ -48,6 +48,16 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     @Value("${bluecat.api.default-headers.X-Reuqest-Appid}")
     private String defaultAppId;
 
+    // 银杏管家配置
+    @Value("${bluecat.api.yinxing-host:chain24819.tmwanba.com}")
+    private String yinxingHost;
+
+    @Value("${bluecat.api.yinxing-user-agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) MacWechat/3.8.7(0x13080712) UnifiedPCMacWechat(0xf2641702) XWEB/18788 Flue}")
+    private String yinxingUserAgent;
+
+    @Value("${bluecat.api.yinxing-referer:https://chain24819.tmwanba.com/release209/}")
+    private String yinxingReferer;
+
     private static final String APP_SOURCE = "pc";
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -119,6 +129,93 @@ public class LaobanApiServiceImpl implements LaobanApiService {
         } catch (Exception e) {
             log.error("Token刷新异常: configId={}", config.getId(), e);
             return null;
+        }
+    }
+
+    /**
+     * 银杏管家-测试连接
+     * 调用 /default/check-bind-phone 接口
+     */
+    @Override
+    public Map<String, Object> testYinxing(ShopConfig config) {
+        log.info("银杏管家测试连接: configId={}, snbid={}", config.getId(), config.getSnbid());
+        long start = System.currentTimeMillis();
+
+        ApiCallLog logEntry = new ApiCallLog();
+        logEntry.setConfigId(config.getId());
+        logEntry.setApiName("yinxing-check-bind-phone");
+        logEntry.setApiUrl("/default/check-bind-phone");
+        logEntry.setRequestMethod("GET");
+        logEntry.setCallTime(LocalDateTime.now());
+
+        try {
+            String url = "https://" + yinxingHost + "/default/check-bind-phone";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.set("Host", yinxingHost);
+            headers.set("User-Agent", yinxingUserAgent);
+            headers.set("Accept", "application/json, text/javascript, */*; q=0.01");
+            headers.set("X-Requested-With", "XMLHttpRequest");
+            headers.set("Sec-Fetch-Site", "same-origin");
+            headers.set("Sec-Fetch-Mode", "cors");
+            headers.set("Sec-Fetch-Dest", "empty");
+            headers.set("Referer", yinxingReferer);
+            headers.set("Accept-Language", "zh-CN,zh;q=0.9");
+            headers.set("Priority", "u=1, i");
+
+            // 设置 Cookie
+            StringBuilder cookieBuilder = new StringBuilder();
+            cookieBuilder.append("chain-id=").append(config.getSnbid());
+
+            // 如果配置有 Cookie，使用配置的 Cookie
+            if (config.getCookie() != null && !config.getCookie().isEmpty()) {
+                // 解析配置中的 Cookie（可能包含多个 cookie）
+                String configCookie = config.getCookie();
+                // 保留 chain-id，添加其他 cookie
+                if (configCookie.contains("HMACCOUNT=")) {
+                    int startIdx = configCookie.indexOf("HMACCOUNT=");
+                    int endIdx = configCookie.indexOf(";", startIdx);
+                    if (endIdx == -1) endIdx = configCookie.length();
+                    String hmAccount = configCookie.substring(startIdx, endIdx);
+                    cookieBuilder.append("; ").append(hmAccount);
+                }
+                if (configCookie.contains("chain=")) {
+                    int startIdx = configCookie.indexOf("chain=");
+                    int endIdx = configCookie.indexOf(";", startIdx);
+                    if (endIdx == -1) endIdx = configCookie.length();
+                    String chain = configCookie.substring(startIdx, endIdx);
+                    cookieBuilder.append("; ").append(chain);
+                }
+            }
+            headers.set("Cookie", cookieBuilder.toString());
+
+            logEntry.setRequestHeaders(headers);
+
+            HttpEntity<String> entity = new HttpEntity<>(null, headers);
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
+
+            logEntry.setResponseCode(response.getStatusCodeValue());
+            logEntry.setResponseBody(response.getBody());
+            logEntry.setStatus(1);
+            logEntry.setDurationMs((int) (System.currentTimeMillis() - start));
+
+            Map<String, Object> body = response.getBody();
+            log.info("银杏管家测试结果: configId={}, code={}, msg={}", config.getId(), body != null ? body.get("code") : "null", body != null ? body.get("msg") : "null");
+
+            return body != null ? body : new HashMap<>();
+        } catch (Exception e) {
+            log.error("银杏管家测试连接异常: configId={}", config.getId(), e);
+            logEntry.setStatus(0);
+            logEntry.setErrorMsg(e.getMessage());
+            logEntry.setDurationMs((int) (System.currentTimeMillis() - start));
+
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("code", -1);
+            errorResult.put("msg", e.getMessage());
+            return errorResult;
+        } finally {
+            apiCallLogService.saveAsync(logEntry);
         }
     }
 
