@@ -3,7 +3,6 @@ package com.bluecat.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bluecat.common.enums.TaskStatus;
 import com.bluecat.common.enums.TaskType;
-import com.bluecat.config.BusinessException;
 import com.bluecat.entity.*;
 import com.bluecat.mapper.*;
 import com.bluecat.service.*;
@@ -16,7 +15,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
@@ -58,8 +56,6 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     @Value("${bluecat.api.yinxing-referer:https://chain24819.tmwanba.com/release209/}")
     private String yinxingReferer;
 
-    private static final String APP_SOURCE = "pc";
-
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -80,9 +76,9 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     private final MachineInfoMapper machineInfoMapper;
     private final ShopImageMapper shopImageMapper;
     private final ShopStatusSnapshotMapper shopStatusSnapshotMapper;
-    
+
     private final TransactionTemplate transactionTemplate;
-    
+
     /**
      * 自注入，用于调用@Async方法（同类内部调用需要通过代理）
      */
@@ -164,29 +160,17 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             headers.set("Accept-Language", "zh-CN,zh;q=0.9");
             headers.set("Priority", "u=1, i");
 
-            // 设置 Cookie
+            // 设置 Cookie - 模拟浏览器完整Cookie
             StringBuilder cookieBuilder = new StringBuilder();
             cookieBuilder.append("chain-id=").append(config.getSnbid());
 
             // 如果配置有 Cookie，使用配置的 Cookie
             if (config.getCookie() != null && !config.getCookie().isEmpty()) {
-                // 解析配置中的 Cookie（可能包含多个 cookie）
                 String configCookie = config.getCookie();
-                // 保留 chain-id，添加其他 cookie
-                if (configCookie.contains("HMACCOUNT=")) {
-                    int startIdx = configCookie.indexOf("HMACCOUNT=");
-                    int endIdx = configCookie.indexOf(";", startIdx);
-                    if (endIdx == -1) endIdx = configCookie.length();
-                    String hmAccount = configCookie.substring(startIdx, endIdx);
-                    cookieBuilder.append("; ").append(hmAccount);
-                }
-                if (configCookie.contains("chain=")) {
-                    int startIdx = configCookie.indexOf("chain=");
-                    int endIdx = configCookie.indexOf(";", startIdx);
-                    if (endIdx == -1) endIdx = configCookie.length();
-                    String chain = configCookie.substring(startIdx, endIdx);
-                    cookieBuilder.append("; ").append(chain);
-                }
+                appendCookieValue(cookieBuilder, configCookie, "HMACCOUNT");
+                appendCookieValue(cookieBuilder, configCookie, "chain");
+                appendCookieValue(cookieBuilder, configCookie, "Hm_lvt_");
+                appendCookieValue(cookieBuilder, configCookie, "Hm_lpvt_");
             }
             headers.set("Cookie", cookieBuilder.toString());
 
@@ -256,7 +240,7 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     @Async("collectionExecutor")
     public void executeCollection(Long configId) {
         log.info("开始异步采集任务: configId={}", configId);
-        
+
         ShopConfig config = shopConfigService.getById(configId);
         if (config == null || config.getStatus() != 1) {
             log.warn("配置不存在或已禁用: {}", configId);
@@ -322,9 +306,13 @@ public class LaobanApiServiceImpl implements LaobanApiService {
 
     @Override
     public List<Map<String, Object>> getYinxingShopList(ShopConfig config) {
-        // 银杏管家门店列表: GET /default/chains?name=recharge&chain_id=xxx
-        String url = "https://" + yinxingHost + "/default/chains?name=recharge&chain_id=" + config.getSnbid();
-        Map<String, Object> response = callYinxingApi(config, url, "yinxing-chains", null, HttpMethod.GET);
+        // 1. 先调用recharge接口，模拟用户操作（去过的门店）
+        String rechargeUrl = "https://" + yinxingHost + "/default/chains?name=recharge&chain_id=" + config.getSnbid();
+        callYinxingApi(config, rechargeUrl, "yinxing-chains", null, null, HttpMethod.GET);
+
+        // 2. 调用全量门店接口，获取所有门店
+        String allShopsUrl = "https://" + yinxingHost + "/default/chains?name=&chain_id=" + config.getSnbid() + "&dingzuo=1";
+        Map<String, Object> response = callYinxingApi(config, allShopsUrl, "yinxing-chains", null, null, HttpMethod.GET);
         if (response != null && response.containsKey("data")) {
             Object data = response.get("data");
             if (data instanceof List) {
@@ -338,7 +326,8 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     public Map<String, Object> getYinxingShopDetail(ShopConfig config, String chainId) {
         // 银杏管家门店详情: GET /default/index?chain_id=xxx
         String url = "https://" + yinxingHost + "/default/index?chain_id=" + chainId;
-        Map<String, Object> response = callYinxingApi(config, url, "yinxing-index", null, HttpMethod.GET);
+        // referer为null，shopId为null，使用默认referer
+        Map<String, Object> response = callYinxingApi(config, url, "yinxing-index", null, null, HttpMethod.GET);
         if (response != null && response.containsKey("data")) {
             return (Map<String, Object>) response.get("data");
         }
@@ -346,10 +335,23 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     }
 
     @Override
-    public List<Map<String, Object>> getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId) {
+    public List<Map<String, Object>> getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId, Long mchId) {
         // 银杏管家舱位信息: GET /dingzuo/item
-        String url = "https://" + yinxingHost + "/dingzuo/item";
-        Map<String, Object> response = callYinxingApi(config, url, "yinxing-dingzuo-item", null, HttpMethod.GET);
+        String referrer = String.format("https://%s/release209/#/select-seat-new?name=新预约订座-多人&mch_id=%d&chain_id=%s",
+                yinxingHost, mchId, chainId);
+
+        String encodedReferrer;
+        try {
+            // UTF-8 是标准编码，这里理论上永远不会抛出异常
+            encodedReferrer = java.net.URLEncoder.encode(referrer, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            // 编码失败时返回空，避免接口报错
+            return new ArrayList<>();
+        }
+
+        String url = "https://" + yinxingHost + "/dingzuo/item?referrer=" + encodedReferrer;
+
+        Map<String, Object> response = callYinxingApi(config, url, "yinxing-dingzuo-item", referrer, null, HttpMethod.GET);
         if (response != null && response.containsKey("data")) {
             Object data = response.get("data");
             if (data instanceof List) {
@@ -357,6 +359,16 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             }
         }
         return new ArrayList<>();
+    }
+
+    /**
+     * 银杏管家订座记录: GET /dingzuo/record
+     * 模拟用户查看订座页面，保持session活跃
+     */
+    private Map<String, Object> getYinxingDingzuoRecord(ShopConfig config, String chainId) {
+        String url = "https://" + yinxingHost + "/dingzuo/record";
+        Map<String, Object> response = callYinxingApi(config, url, "yinxing-dingzuo-record", null, null, HttpMethod.GET);
+        return response != null ? response : new HashMap<>();
     }
 
     @Override
@@ -374,39 +386,64 @@ public class LaobanApiServiceImpl implements LaobanApiService {
         DataCollectionTask task = createTask(configId, null, "YINXING_SHOP_LIST");
 
         try {
-            // 1. 获取银杏管家门店列表
+            // Step 1: 模拟浏览器访问首页 - 检查绑定状态（探路请求，建立session）
+            Map<String, Object> checkResult = testYinxing(config);
+            if (checkResult != null && checkResult.containsKey("code")) {
+                Integer code = (Integer) checkResult.get("code");
+                if (code != null && code == -201) {
+                    log.error("银杏管家Cookie已失效，终止采集: configId={}", configId);
+                    finishTask(task, TaskStatus.FAILED, startTime, "Cookie已失效，请重新获取");
+                    return;
+                }
+            }
+            log.info("银杏管家探路请求完成: configId={}", configId);
+
+            // 模拟用户浏览页面间隔 3-6秒
+            randomDelay(3000, 6000);
+
+            // Step 2: 获取门店列表（对应浏览器访问充值页面的请求）
             List<Map<String, Object>> shopList = getYinxingShopList(config);
             log.info("银杏管家门店列表: configId={}, count={}", configId, shopList.size());
 
-            // 2. 遍历门店采集数据
+            if (shopList.isEmpty()) {
+                finishTask(task, TaskStatus.SUCCESS, startTime);
+                return;
+            }
+
+            // 模拟用户查看门店列表 3-8秒
+            randomDelay(3000, 8000);
+
+            // Step 3: 遍历门店采集数据（直接用chains数据，无需再调index）
             for (Map<String, Object> shopData : shopList) {
                 String chainId = getString(shopData, "id");
                 if (chainId == null || chainId.isEmpty()) {
                     continue;
                 }
 
-                // 获取门店详情
-                Map<String, Object> detailData = getYinxingShopDetail(config, chainId);
-                if (detailData.isEmpty()) {
-                    log.warn("获取门店详情失败: chainId={}", chainId);
-                    continue;
-                }
-
-                // 保存或更新门店
-                ShopInfo shop = saveYinxingShopInfo(config, chainId, detailData);
+                // 直接用chains接口数据保存门店（chains已包含name/lng/lat/省市区等）
+                ShopInfo shop = saveYinxingShopInfo(config, shopData);
                 if (shop == null) {
+                    randomDelay(2000, 4000);
                     continue;
                 }
 
-                // 获取舱位/机器信息并保存快照
-                List<Map<String, Object>> roomList = getYinxingRoomInfo(config, null, chainId);
+                // Step 3a: 获取订座记录（模拟用户查看订座页面）
+                getYinxingDingzuoRecord(config, chainId);
+
+                // 模拟用户查看订座后思考 2-5秒
+                randomDelay(2000, 5000);
+
+                // Step 3b: 获取舱位/机器信息并保存快照
+                // chains的id即mch_id
+                Long mchId = getLong(shopData, "id");
+                List<Map<String, Object>> roomList = getYinxingRoomInfo(config, null, chainId, mchId);
                 if (!roomList.isEmpty()) {
-                    // 保存舱位、机器信息和状态快照
+                    // 检查舱位数据是否返回了失效标识
                     saveYinxingWithSnapshot(shop, roomList, task.getId());
                 }
 
-                // 随机延迟1-3秒
-                randomDelay(1000, 3000);
+                // 模拟用户浏览完一个门店后，切换到下一个门店 5-10秒
+                randomDelay(5000, 10000);
             }
 
             finishTask(task, TaskStatus.SUCCESS, startTime);
@@ -439,9 +476,10 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     }
 
     /**
-     * 保存银杏管家门店信息
+     * 保存银杏管家门店信息（从chains接口数据构建）
      */
-    private ShopInfo saveYinxingShopInfo(ShopConfig config, String chainId, Map<String, Object> detailData) {
+    private ShopInfo saveYinxingShopInfo(ShopConfig config, Map<String, Object> chainsData) {
+        String chainId = getString(chainsData, "id");
         ShopInfo shop = shopInfoService.getBySnbid(chainId);
         if (shop == null) {
             shop = new ShopInfo();
@@ -449,18 +487,18 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             shop.setSnbid(chainId);
         }
 
-        // 银杏管家字段映射
-        shop.setName(getString(detailData, "mch_name"));           // 门店名称
-        shop.setAddress(getString(detailData, "mch_ext.addr"));     // 地址
-        shop.setProvinceName(getString(detailData, "province_name")); // 省份
-        shop.setCityName(getString(detailData, "city_name"));       // 城市
-        shop.setZoneName(getString(detailData, "region_name"));     // 区县
-        shop.setLongitude(getBigDecimal(detailData, "lng"));       // 经度
-        shop.setLatitude(getBigDecimal(detailData, "lat"));        // 纬度
-        shop.setShopId(getLong(detailData, "mch_id"));              // 商户ID
+        // chains接口字段映射
+        shop.setName(getString(chainsData, "name"));                // 门店名称
+        shop.setAddress(getString(chainsData, "gps_addr"));         // 地址
+        shop.setProvinceName(getString(chainsData, "province_name")); // 省份
+        shop.setCityName(getString(chainsData, "city_name"));       // 城市
+        shop.setZoneName(getString(chainsData, "region_name"));     // 区县
+        shop.setLongitude(getBigDecimal(chainsData, "lng"));        // 经度
+        shop.setLatitude(getBigDecimal(chainsData, "lat"));         // 纬度
+        shop.setShopId(getLong(chainsData, "id"));                  // 门店ID（chains的id即mch_id）
 
         // 设置原始数据
-        shop.setRawJson(detailData);
+        shop.setRawJson(chainsData);
 
         if (shop.getId() == null) {
             shopInfoService.save(shop);
@@ -575,6 +613,17 @@ public class LaobanApiServiceImpl implements LaobanApiService {
                 areaSnapshot.setOccupancyRate(rate);
             }
             areaStatusSnapshotService.save(areaSnapshot);
+
+            // 保存区域费用快照
+            AreaFeeSnapshot feeSnapshot = new AreaFeeSnapshot();
+            feeSnapshot.setSnapshotId(snapshot.getId());
+            feeSnapshot.setShopId(shop.getId());
+            feeSnapshot.setAreaName(roomName);
+            feeSnapshot.setVipRoom(roomData.containsKey("is_no") && Boolean.TRUE.equals(roomData.get("is_no")) ? 1 : 0);
+            feeSnapshot.setTotalSeats(areaTotal);
+            feeSnapshot.setRate(getBigDecimal(roomData, "fee"));
+            feeSnapshot.setWhole(roomData.containsKey("is_no") && Boolean.TRUE.equals(roomData.get("is_no")) ? 1 : 0);
+            areaFeeSnapshotService.save(feeSnapshot);
         }
 
         // 更新门店快照统计
@@ -652,8 +701,15 @@ public class LaobanApiServiceImpl implements LaobanApiService {
 
     /**
      * 调用银杏管家API
+     *
+     * @param config  网吧配置
+     * @param url     请求URL
+     * @param apiName API名称
+     * @param referer Referer头（可选，用于dingzuo等接口）
+     * @param shopId  门店ID
+     * @param method  请求方法
      */
-    private Map<String, Object> callYinxingApi(ShopConfig config, String url, String apiName, Long shopId, HttpMethod method) {
+    private Map<String, Object> callYinxingApi(ShopConfig config, String url, String apiName, String referer, Long shopId, HttpMethod method) {
         long start = System.currentTimeMillis();
         ApiCallLog logEntry = new ApiCallLog();
         logEntry.setConfigId(config.getId());
@@ -673,30 +729,23 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             headers.set("Sec-Fetch-Site", "same-origin");
             headers.set("Sec-Fetch-Mode", "cors");
             headers.set("Sec-Fetch-Dest", "empty");
-            headers.set("Referer", yinxingReferer);
+            // 优先使用动态referer，否则使用默认referer
+            headers.set("Referer", referer != null ? referer : yinxingReferer);
             headers.set("Accept-Language", "zh-CN,zh;q=0.9");
             headers.set("Priority", "u=1, i");
 
-            // 设置 Cookie
+            // 设置 Cookie - 模拟浏览器完整Cookie
             StringBuilder cookieBuilder = new StringBuilder();
             cookieBuilder.append("chain-id=").append(config.getSnbid());
 
             if (config.getCookie() != null && !config.getCookie().isEmpty()) {
                 String configCookie = config.getCookie();
-                if (configCookie.contains("HMACCOUNT=")) {
-                    int startIdx = configCookie.indexOf("HMACCOUNT=");
-                    int endIdx = configCookie.indexOf(";", startIdx);
-                    if (endIdx == -1) endIdx = configCookie.length();
-                    String hmAccount = configCookie.substring(startIdx, endIdx);
-                    cookieBuilder.append("; ").append(hmAccount);
-                }
-                if (configCookie.contains("chain=")) {
-                    int startIdx = configCookie.indexOf("chain=");
-                    int endIdx = configCookie.indexOf(";", startIdx);
-                    if (endIdx == -1) endIdx = configCookie.length();
-                    String chain = configCookie.substring(startIdx, endIdx);
-                    cookieBuilder.append("; ").append(chain);
-                }
+                // 解析并拼接所有配置中的cookie项
+                // 支持 HMACCOUNT, chain, Hm_lvt_*, Hm_lpvt_* 等
+                appendCookieValue(cookieBuilder, configCookie, "HMACCOUNT");
+                appendCookieValue(cookieBuilder, configCookie, "chain");
+                appendCookieValue(cookieBuilder, configCookie, "Hm_lvt_");
+                appendCookieValue(cookieBuilder, configCookie, "Hm_lpvt_");
             }
             headers.set("Cookie", cookieBuilder.toString());
 
@@ -733,7 +782,37 @@ public class LaobanApiServiceImpl implements LaobanApiService {
         }
         return new ArrayList<>();
     }
-    
+
+    /**
+     * 从配置Cookie字符串中提取指定key的值并拼接到cookieBuilder
+     * 支持精确匹配（如 HMACCOUNT）和前缀匹配（如 Hm_lvt_）
+     */
+    private void appendCookieValue(StringBuilder cookieBuilder, String configCookie, String key) {
+        if (configCookie == null || !configCookie.contains(key)) {
+            return;
+        }
+        // 找到所有匹配的cookie项
+        int searchFrom = 0;
+        while (searchFrom < configCookie.length()) {
+            int startIdx = configCookie.indexOf(key, searchFrom);
+            if (startIdx == -1) break;
+
+            // 确保是cookie的开头（前面是;或开头位置）
+            if (startIdx > 0 && configCookie.charAt(startIdx - 1) != ' ' && configCookie.charAt(startIdx - 1) != ';') {
+                searchFrom = startIdx + 1;
+                continue;
+            }
+
+            int endIdx = configCookie.indexOf(";", startIdx);
+            if (endIdx == -1) endIdx = configCookie.length();
+            String cookieItem = configCookie.substring(startIdx, endIdx).trim();
+            if (!cookieItem.isEmpty()) {
+                cookieBuilder.append("; ").append(cookieItem);
+            }
+            searchFrom = endIdx + 1;
+        }
+    }
+
     /**
      * 在独立事务中保存门店列表
      */
@@ -742,7 +821,7 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             saveShopList(config, shopList);
         });
     }
-    
+
     /**
      * 在独立事务中采集单个门店数据
      */
@@ -1128,7 +1207,7 @@ public class LaobanApiServiceImpl implements LaobanApiService {
      * 从空闲机器列表保存机器状态历史
      */
     private void saveMachineStatusHistoryFromFreeList(Long snapshotId, Long taskId, Long shopId, String areaName,
-                                                       List<String> freeComList, int areaTotal) {
+                                                      List<String> freeComList, int areaTotal) {
         Set<String> freeSet = freeComList != null ? new HashSet<>(freeComList) : new HashSet<>();
 
         // 获取该区域所有机器
@@ -1346,6 +1425,7 @@ public class LaobanApiServiceImpl implements LaobanApiService {
 
     /**
      * 随机延迟，模拟真人操作
+     *
      * @param minMs 最小延迟毫秒数
      * @param maxMs 最大延迟毫秒数
      */

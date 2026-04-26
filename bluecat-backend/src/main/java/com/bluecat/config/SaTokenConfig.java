@@ -34,6 +34,8 @@ public class SaTokenConfig implements WebMvcConfigurer {
                             "/webjars/**",
                             "/swagger-resources/**",
                             "/v2/api-docs/**",
+                            "/v3/api-docs/**",
+                            "/swagger-ui/**",
                             // 排除健康检查
                             "/actuator/**"
                     )

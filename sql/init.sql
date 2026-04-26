@@ -39,6 +39,7 @@ CREATE TABLE shop_config (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     config_name VARCHAR(100) NOT NULL COMMENT '配置名称',
     snbid VARCHAR(50) NOT NULL COMMENT '网吧主账号snbid',
+    platform_type TINYINT DEFAULT 0 COMMENT '平台类型:0=x管家,1=银杏管家',
     app_id VARCHAR(50) NOT NULL COMMENT 'AppID',
     jwt_token TEXT NOT NULL COMMENT 'JWT Token',
     cookie TEXT COMMENT 'Cookie',

@@ -28,4 +28,9 @@ public interface ShopConfigService extends IService<ShopConfig> {
      * 获取所有启用的配置
      */
     List<ShopConfig> listEnabled();
+
+    /**
+     * 获取所有启用的配置（不区分平台类型）
+     */
+    List<ShopConfig> listAllEnabled();
 }

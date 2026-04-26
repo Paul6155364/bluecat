@@ -100,9 +100,10 @@ public interface LaobanApiService {
      * @param config  网吧配置
      * @param shopId  门店ID
      * @param chainId 门店chain_id
+     * @param mchId   商户ID(mch_id)
      * @return 舱位机器信息
      */
-    List<Map<String, Object>> getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId);
+    List<Map<String, Object>> getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId, Long mchId);
 
     /**
      * 银杏管家-执行采集任务

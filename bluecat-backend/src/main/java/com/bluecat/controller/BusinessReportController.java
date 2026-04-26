@@ -58,7 +58,7 @@ public class BusinessReportController {
     @ApiOperation("获取网咖配置列表")
     @GetMapping("/configs")
     public Result<List<Map<String, Object>>> listConfigs() {
-        List<ShopConfig> configs = shopConfigService.listEnabled();
+        List<ShopConfig> configs = shopConfigService.listAllEnabled();
         List<Map<String, Object>> result = configs.stream().map(config -> {
             Map<String, Object> item = new HashMap<>();
             item.put("id", config.getId());

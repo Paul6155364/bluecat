@@ -57,4 +57,8 @@ public class ShopConfig extends BaseEntity {
 
     @ApiModelProperty("创建人")
     private String createBy;
+
+    @ApiModelProperty("最后采集时间（瞬态字段，不映射数据库）")
+    @TableField(exist = false)
+    private String lastCollectTime;
 }

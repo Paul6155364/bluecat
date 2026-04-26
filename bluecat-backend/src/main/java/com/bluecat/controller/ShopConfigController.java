@@ -44,7 +44,7 @@ public class ShopConfigController {
     @ApiOperation("查询所有启用的配置")
     @GetMapping("/list/enabled")
     public Result<?> listEnabled() {
-        return Result.success(shopConfigService.listEnabled());
+        return Result.success(shopConfigService.listAllEnabled());
     }
 
     @ApiOperation("根据ID查询")
@@ -66,7 +66,7 @@ public class ShopConfigController {
             if (code == 0) {
                 return Result.success("Token有效", result);
             } else {
-                return Result.error(401, "Token已失效或无效: " + result.get("msg"));
+                return Result.error(400, "Token已失效或无效: " + result.get("msg"));
             }
         }
         return Result.error("Token测试失败，请检查网络或配置");
@@ -82,10 +82,14 @@ public class ShopConfigController {
         Map<String, Object> result = laobanApiService.testYinxing(config);
         if (result != null && result.get("code") != null) {
             Integer code = (Integer) result.get("code");
+            String msg = (String) result.get("msg");
             if (code == 0) {
                 return Result.success("连接成功", result);
+            } else if (code == -201 || "账户登录状态无效".equals(msg)) {
+                // -201 表示 Cookie/登录状态失效，需要重新获取
+                return Result.error(400, "Token失效，请重新获取Cookie");
             } else {
-                return Result.error(401, "连接失败: " + result.get("msg"));
+                return Result.error("连接失败: " + msg);
             }
         }
         return Result.error("连接失败，请检查网络或配置");

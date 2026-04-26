@@ -45,6 +45,22 @@ public class TaskController {
         return Result.success("数据采集任务已触发");
     }
 
+    // ========== 银杏管家采集接口 ==========
+
+    @ApiOperation("手动触发银杏管家数据采集-所有配置")
+    @PostMapping("/yinxing/execute")
+    public Result<Void> executeAllYinxing() {
+        laobanApiService.executeAllYinxingCollection();
+        return Result.success("银杏管家数据采集任务已触发");
+    }
+
+    @ApiOperation("手动触发银杏管家数据采集-指定配置")
+    @PostMapping("/yinxing/execute/{configId}")
+    public Result<Void> executeYinxingByConfigId(@PathVariable Long configId) {
+        laobanApiService.executeYinxingCollection(configId);
+        return Result.success("银杏管家数据采集任务已触发");
+    }
+
     @ApiOperation("分页查询采集任务")
     @GetMapping("/page")
     public Result<PageResult<DataCollectionTask>> page(

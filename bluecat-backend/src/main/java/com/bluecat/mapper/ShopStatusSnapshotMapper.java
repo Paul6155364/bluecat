@@ -8,6 +8,8 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 门店实时状态快照表 Mapper
@@ -36,4 +38,23 @@ public interface ShopStatusSnapshotMapper extends BaseMapper<ShopStatusSnapshot>
             "  AND DATE(create_time) = CURDATE() " +
             "ORDER BY id DESC LIMIT 1")
     int updateDayRevenueByShopId(@Param("shopId") Long shopId, @Param("dayRevenue") BigDecimal dayRevenue);
+
+    /**
+     * 批量查询配置关联的最新采集时间
+     * 通过 shop_info 表关联 shop_status_snapshot 表
+     * 返回 Map: configId -> lastCollectTime
+     */
+    @Select("<script>" +
+            "SELECT sc.id AS config_id, " +
+            "       DATE_FORMAT(MAX(ss.snapshot_time), '%Y-%m-%d %H:%i:%s') AS last_collect_time " +
+            "FROM shop_config sc " +
+            "LEFT JOIN shop_info si ON si.config_id = sc.id " +
+            "LEFT JOIN shop_status_snapshot ss ON ss.shop_id = si.id " +
+            "WHERE sc.id IN " +
+            "<foreach collection='configIds' item='id' open='(' separator=',' close=')'>" +
+            "#{id}" +
+            "</foreach>" +
+            "GROUP BY sc.id" +
+            "</script>")
+    List<Map<String, Object>> getLatestCollectTimeByConfigIds(@Param("configIds") List<Long> configIds);
 }
