@@ -43,7 +43,7 @@ public class MachineStatusHistory implements Serializable {
     @ApiModelProperty("所属区域")
     private String areaName;
 
-    @ApiModelProperty("状态:1空闲,0占用")
+    @ApiModelProperty("状态:0=占用,1=空闲,2=预约锁定")
     private Integer status;
 
     @ApiModelProperty("快照时间")

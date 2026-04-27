@@ -335,7 +335,13 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     }
 
     @Override
-    public List<Map<String, Object>> getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId, Long mchId) {
+    public YinxingRoomResult getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId, Long mchId) {
+        // 银杏管家切换门店session: GET /default/session-mch?mch_id=xxx
+        // 必须先调用此接口切换到指定门店，再调用dingzuo/item才能获取正确数据
+        String sessionUrl = "https://" + yinxingHost + "/default/session-mch?mch_id=" + mchId;
+        Map<String, Object> sessionResponse = callYinxingApi(config, sessionUrl, "yinxing-session-mch", null, null, HttpMethod.GET);
+        log.debug("银杏管家切换门店session: mchId={}, response={}", mchId, sessionResponse);
+
         // 银杏管家舱位信息: GET /dingzuo/item
         String referrer = String.format("https://%s/release209/#/select-seat-new?name=新预约订座-多人&mch_id=%d&chain_id=%s",
                 yinxingHost, mchId, chainId);
@@ -346,26 +352,37 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             encodedReferrer = java.net.URLEncoder.encode(referrer, "UTF-8");
         } catch (java.io.UnsupportedEncodingException e) {
             // 编码失败时返回空，避免接口报错
-            return new ArrayList<>();
+            return new YinxingRoomResult(new ArrayList<>(), null);
         }
 
         String url = "https://" + yinxingHost + "/dingzuo/item?referrer=" + encodedReferrer;
 
         Map<String, Object> response = callYinxingApi(config, url, "yinxing-dingzuo-item", referrer, null, HttpMethod.GET);
-        if (response != null && response.containsKey("data")) {
-            Object data = response.get("data");
-            if (data instanceof List) {
-                return (List<Map<String, Object>>) data;
+        List<Map<String, Object>> roomList = new ArrayList<>();
+        Map<String, Object> ext = null;
+
+        if (response != null) {
+            if (response.containsKey("data") && response.get("data") instanceof List) {
+                roomList = (List<Map<String, Object>>) response.get("data");
             }
+            if (response.containsKey("ext") && response.get("ext") instanceof Map) {
+                ext = (Map<String, Object>) response.get("ext");
+            }
+            // 调试日志：打印API返回的ext数据，重点关注ext.mch_id与传入mchId的对比
+            Integer extMchId = ext != null ? getInteger(ext, "mch_id") : null;
+            log.info("银杏管家舱位API返回: 传入mchId={}, ext.mch_id={}, chainId={}, roomCount={}, ext.total={}, ext.online_num={}", 
+                    mchId, extMchId, chainId, roomList.size(), 
+                    ext != null ? getInteger(ext, "total") : null,
+                    ext != null ? getInteger(ext, "online_num") : null);
         }
-        return new ArrayList<>();
+        return new YinxingRoomResult(roomList, ext);
     }
 
     /**
      * 银杏管家订座记录: GET /dingzuo/record
      * 模拟用户查看订座页面，保持session活跃
      */
-    private Map<String, Object> getYinxingDingzuoRecord(ShopConfig config, String chainId) {
+    private Map<String, Object> getYinxingDingzuoRecord(ShopConfig config) {
         String url = "https://" + yinxingHost + "/dingzuo/record";
         Map<String, Object> response = callYinxingApi(config, url, "yinxing-dingzuo-record", null, null, HttpMethod.GET);
         return response != null ? response : new HashMap<>();
@@ -415,10 +432,15 @@ public class LaobanApiServiceImpl implements LaobanApiService {
 
             // Step 3: 遍历门店采集数据（直接用chains数据，无需再调index）
             for (Map<String, Object> shopData : shopList) {
-                String chainId = getString(shopData, "id");
-                if (chainId == null || chainId.isEmpty()) {
+                // chains返回的id是mch_id（单门店ID），snbid是chain_id（连锁机构ID）
+                Long mchId = getLong(shopData, "id");
+                if (mchId == null) {
                     continue;
                 }
+                // 调试日志：打印当前门店信息
+                log.info("银杏管家处理门店: mchId={}, name={}, chainId={}, configCookie={}", 
+                        mchId, getString(shopData, "name"), config.getSnbid(), 
+                        config.getCookie() != null ? config.getCookie().substring(0, Math.min(30, config.getCookie().length())) + "..." : "null");
 
                 // 直接用chains接口数据保存门店（chains已包含name/lng/lat/省市区等）
                 ShopInfo shop = saveYinxingShopInfo(config, shopData);
@@ -428,18 +450,18 @@ public class LaobanApiServiceImpl implements LaobanApiService {
                 }
 
                 // Step 3a: 获取订座记录（模拟用户查看订座页面）
-                getYinxingDingzuoRecord(config, chainId);
+                getYinxingDingzuoRecord(config);
 
                 // 模拟用户查看订座后思考 2-5秒
                 randomDelay(2000, 5000);
 
                 // Step 3b: 获取舱位/机器信息并保存快照
-                // chains的id即mch_id
-                Long mchId = getLong(shopData, "id");
-                List<Map<String, Object>> roomList = getYinxingRoomInfo(config, null, chainId, mchId);
-                if (!roomList.isEmpty()) {
+                // chainId用config.getSnbid()（连锁机构ID），mchId用chains返回的id（单门店ID）
+                String chainId = config.getSnbid();
+                YinxingRoomResult roomResult = getYinxingRoomInfo(config, null, chainId, mchId);
+                if (!roomResult.getRoomList().isEmpty()) {
                     // 检查舱位数据是否返回了失效标识
-                    saveYinxingWithSnapshot(shop, roomList, task.getId());
+                    saveYinxingWithSnapshot(shop, roomResult.getRoomList(), roomResult.getExt(), task.getId());
                 }
 
                 // 模拟用户浏览完一个门店后，切换到下一个门店 5-10秒
@@ -512,9 +534,15 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     /**
      * 保存银杏管家舱位/机器信息（带状态快照）
      * 银杏管家结构: id, name, type, on_machine[], off_machine[], fee, bj_machine[]
+     * @param ext API返回的ext数据，包含真正的total（总机位数）、online_num（上机人数）等
      */
-    private void saveYinxingWithSnapshot(ShopInfo shop, List<Map<String, Object>> roomList, Long taskId) {
+    private void saveYinxingWithSnapshot(ShopInfo shop, List<Map<String, Object>> roomList, Map<String, Object> ext, Long taskId) {
         LocalDateTime snapshotTime = LocalDateTime.now();
+
+        // 从ext获取真正的总机位数（ext.total是API提供的权威数据）
+        // ext字段：total=总机位, online_num=实际上机人数, uid=用户ID, mch_id=商户ID等
+        Integer extTotal = getInteger(ext, "total");
+        Integer extOnlineNum = getInteger(ext, "online_num");
 
         // 创建门店快照
         ShopStatusSnapshot snapshot = new ShopStatusSnapshot();
@@ -524,9 +552,14 @@ public class LaobanApiServiceImpl implements LaobanApiService {
         snapshot.setRawJson(roomList);
         shopStatusSnapshotService.save(snapshot);
 
-        int totalMachines = 0;
+        // 计算出的各状态机器数（基于API返回的on/off_machine，不含subscribe_machine）
+        int calculatedTotal = 0;
         int freeMachines = 0;
         int busyMachines = 0;
+        int subscribedMachines = 0;
+
+        // 调试日志：打印每个舱位的详细计算
+        log.info("银杏管家机器计算明细: shopId={}, 舱位数={}", shop.getId(), roomList.size());
 
         // 遍历舱位
         for (Map<String, Object> roomData : roomList) {
@@ -547,22 +580,32 @@ public class LaobanApiServiceImpl implements LaobanApiService {
                 shopAreaService.save(area);
             }
 
-            // 获取空闲和占用机器列表
-            List<String> onMachines = getStringList(roomData, "on_machine");  // 占用中
-            List<String> offMachines = getStringList(roomData, "off_machine"); // 空闲
+            // 获取空闲、占用和预约锁定机器列表
+            // 注意：subscribe_machine是临时预约锁定，不计入"总机位"
+            // 真正的总机位 = on_machine + off_machine
+            List<String> onMachines = getStringList(roomData, "on_machine");       // 占用中
+            List<String> offMachines = getStringList(roomData, "off_machine");    // 空闲
+            List<String> subscribeMachines = getStringList(roomData, "subscribe_machine"); // 预约锁定（临时，不计入总机位）
 
-            int areaTotal = onMachines.size() + offMachines.size();
+            int areaTotal = onMachines.size() + offMachines.size();  // 不含预约锁定
             int areaFree = offMachines.size();
             int areaBusy = onMachines.size();
+            int areaSubscribed = subscribeMachines.size();
 
-            totalMachines += areaTotal;
+            // 调试日志：每个舱位的机器明细
+            log.debug("银杏管家舱位明细: shopId={}, area={}, on={}, off={}, subscribe={}, total={}",
+                    shop.getId(), roomName, onMachines.size(), offMachines.size(), subscribeMachines.size(), areaTotal);
+
+            calculatedTotal += areaTotal;
             freeMachines += areaFree;
             busyMachines += areaBusy;
+            subscribedMachines += areaSubscribed;
 
             // 保存机器信息
             Set<String> allMachines = new HashSet<>();
             allMachines.addAll(onMachines);
             allMachines.addAll(offMachines);
+            allMachines.addAll(subscribeMachines);
 
             for (String comName : allMachines) {
                 MachineInfo machine = machineInfoService.getByShopIdAndComName(shop.getId(), comName);
@@ -588,8 +631,14 @@ public class LaobanApiServiceImpl implements LaobanApiService {
                 history.setMachineId(machine.getId());
                 history.setComName(comName);
                 history.setAreaName(roomName);
-                // 空闲 = 1, 占用 = 0
-                history.setStatus(offMachines.contains(comName) ? 1 : 0);
+                // 状态: 0=占用, 1=空闲, 2=预约锁定
+                if (subscribeMachines.contains(comName)) {
+                    history.setStatus(2);  // 预约锁定
+                } else if (offMachines.contains(comName)) {
+                    history.setStatus(1);  // 空闲
+                } else {
+                    history.setStatus(0);  // 占用
+                }
                 history.setSnapshotTime(snapshotTime);
                 machineStatusHistoryService.save(history);
             }
@@ -627,19 +676,22 @@ public class LaobanApiServiceImpl implements LaobanApiService {
         }
 
         // 更新门店快照统计
-        snapshot.setTotalMachines(totalMachines);
+        // 优先使用ext.total作为总机位数（API权威数据），否则用计算值
+        int finalTotal = (extTotal != null && extTotal > 0) ? extTotal : calculatedTotal;
+        snapshot.setTotalMachines(finalTotal);
         snapshot.setFreeMachines(freeMachines);
         snapshot.setBusyMachines(busyMachines);
-        if (totalMachines > 0) {
+        if (finalTotal > 0) {
             BigDecimal rate = BigDecimal.valueOf(busyMachines)
                     .multiply(BigDecimal.valueOf(100))
-                    .divide(BigDecimal.valueOf(totalMachines), 2, RoundingMode.HALF_UP);
+                    .divide(BigDecimal.valueOf(finalTotal), 2, RoundingMode.HALF_UP);
             snapshot.setOccupancyRate(rate);
         }
         shopStatusSnapshotService.updateById(snapshot);
 
-        log.info("保存银杏管家状态快照: shopId={}, total={}, free={}, busy={}",
-                shop.getId(), totalMachines, freeMachines, busyMachines);
+        // 记录日志，包含ext验证数据和计算明细
+        log.info("保存银杏管家状态快照: shopId={}, calculatedTotal={}, ext.total={}, finalTotal={}, free={}, busy={}, subscribed={}, ext.online_num={}",
+                shop.getId(), calculatedTotal, extTotal, finalTotal, freeMachines, busyMachines, subscribedMachines, extOnlineNum);
     }
 
     /**

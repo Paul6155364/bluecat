@@ -14,6 +14,26 @@ import java.util.Map;
 public interface LaobanApiService {
 
     /**
+     * 银杏管家舱位信息结果（包含房间列表和扩展信息）
+     */
+    class YinxingRoomResult {
+        private List<Map<String, Object>> roomList;
+        private Map<String, Object> ext;
+
+        public YinxingRoomResult() {}
+
+        public YinxingRoomResult(List<Map<String, Object>> roomList, Map<String, Object> ext) {
+            this.roomList = roomList;
+            this.ext = ext;
+        }
+
+        public List<Map<String, Object>> getRoomList() { return roomList; }
+        public void setRoomList(List<Map<String, Object>> roomList) { this.roomList = roomList; }
+        public Map<String, Object> getExt() { return ext; }
+        public void setExt(Map<String, Object> ext) { this.ext = ext; }
+    }
+
+    /**
      * 测试Token是否有效
      *
      * @param config 网吧配置
@@ -101,9 +121,9 @@ public interface LaobanApiService {
      * @param shopId  门店ID
      * @param chainId 门店chain_id
      * @param mchId   商户ID(mch_id)
-     * @return 舱位机器信息
+     * @return 舱位信息结果（包含roomList和ext）
      */
-    List<Map<String, Object>> getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId, Long mchId);
+    YinxingRoomResult getYinxingRoomInfo(ShopConfig config, Long shopId, String chainId, Long mchId);
 
     /**
      * 银杏管家-执行采集任务
