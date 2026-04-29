@@ -56,6 +56,19 @@ public class LaobanApiServiceImpl implements LaobanApiService {
     @Value("${bluecat.api.yinxing-referer:https://chain24819.tmwanba.com/release209/}")
     private String yinxingReferer;
 
+    // 网鱼网咖配置
+    @Value("${bluecat.api.wangyu-host:vip-gateway.wywk.cn}")
+    private String wangyuHost;
+
+    @Value("${bluecat.api.wangyu-client-source:MA_WECHAT}")
+    private String wangyuClientSource;
+
+    @Value("${bluecat.api.wangyu-version:3.8.7}")
+    private String wangyuVersion;
+
+    @Value("${bluecat.api.wangyu-user-agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 MicroMessenger/7.0.20.1781(0x6700143B) NetType/WIFI MiniProgramEnv/Mac MacWechat/WMPF MacWechat/3.8.7(0x13080712) UnifiedPCMacWechat(0xf2641702) XWEB/18788}")
+    private String wangyuUserAgent;
+
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -495,6 +508,539 @@ public class LaobanApiServiceImpl implements LaobanApiService {
                 log.error("银杏管家采集失败: configId={}", config.getId(), e);
             }
         }
+    }
+
+    // ========== 网鱼网咖采集方法 ==========
+
+    @Override
+    public Map<String, Object> testWangyu(ShopConfig config) {
+        log.info("网鱼网咖测试连接: configId={}", config.getId());
+        long start = System.currentTimeMillis();
+
+        ApiCallLog logEntry = new ApiCallLog();
+        logEntry.setConfigId(config.getId());
+        logEntry.setApiName("wangyu-test");
+        logEntry.setApiUrl("/asset-web/api/shop/v3/bookingStoreList");
+        logEntry.setRequestMethod("POST");
+        logEntry.setCallTime(LocalDateTime.now());
+
+        try {
+            // 调用门店列表接口进行测试
+            Map<String, Object> result = getWangyuShopList(config, "", 1, 1);
+            logEntry.setResponseBody(result);
+            logEntry.setStatus(1);
+            logEntry.setDurationMs((int) (System.currentTimeMillis() - start));
+
+            if (result != null && result.containsKey("code")) {
+                Integer code = (Integer) result.get("code");
+                if (code == 0) {
+                    log.info("网鱼网咖测试成功: configId={}", config.getId());
+                    return result;
+                } else {
+                    log.warn("网鱼网咖测试失败: configId={}, code={}, msg={}", config.getId(), code, result.get("message"));
+                    return result;
+                }
+            }
+            return result != null ? result : new HashMap<>();
+        } catch (Exception e) {
+            log.error("网鱼网咖测试连接异常: configId={}", config.getId(), e);
+            logEntry.setStatus(0);
+            logEntry.setErrorMsg(e.getMessage());
+            logEntry.setDurationMs((int) (System.currentTimeMillis() - start));
+
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("code", -1);
+            errorResult.put("msg", e.getMessage());
+            return errorResult;
+        } finally {
+            apiCallLogService.saveAsync(logEntry);
+        }
+    }
+
+    @Override
+    public Map<String, Object> getWangyuShopList(ShopConfig config, String keyword, Integer page, Integer pageSize) {
+        String url = "https://" + wangyuHost + "/asset-web/api/shop/v3/bookingStoreList";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("keyword", keyword != null ? keyword : "");
+        body.put("defaultStoreCode", "");
+        // 使用配置的经纬度或默认值
+        body.put("longitude", 104.043113);
+        body.put("latitude", 30.642419);
+        body.put("page", page != null ? page : 1);
+        body.put("pageSize", pageSize != null ? pageSize : 10);
+        body.put("filterItemList", new ArrayList<>());
+
+        return callWangyuApi(config, url, body, "wangyu-bookingStoreList");
+    }
+
+    /**
+     * 调用网鱼网咖API
+     */
+    private Map<String, Object> callWangyuApi(ShopConfig config, String url, Map<String, Object> body, String apiName) {
+        long start = System.currentTimeMillis();
+        ApiCallLog logEntry = new ApiCallLog();
+        logEntry.setConfigId(config.getId());
+        logEntry.setApiName(apiName);
+        logEntry.setApiUrl(url);
+        logEntry.setRequestMethod("POST");
+        logEntry.setCallTime(LocalDateTime.now());
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Host", wangyuHost);
+            headers.set("client-source", wangyuClientSource);
+            // 生成x-ma-uid（可使用固定值或随机生成）
+            headers.set("x-ma-uid", "da14b97ded62e386a4def522b6b13500f34d492d723e0bd96543841f5feaedab");
+            headers.set("x-version", wangyuVersion);
+            headers.set("xweb_xhr", "1");
+            headers.set("x-auth", config.getJwtToken());
+            headers.set("User-Agent", wangyuUserAgent);
+
+            // 设备信息
+            String deviceInfo = "{\"brand\":\"apple\",\"model\":\"Mac16,13\",\"systemVersion\":\"Mac OS X 26.3.1 arm64\",\"platform\":\"mac\",\"deviceId\":\"\",\"coreVersion\":\"\",\"netWorkType\":\"wifi\",\"cpuType\":\"\",\"screenHeight\":780,\"screenWidth\":414,\"language\":\"zh_CN\",\"latitude\":30.642419,\"longitude\":104.043113}";
+            headers.set("device-info", deviceInfo);
+
+            headers.set("Accept", "*/*");
+            headers.set("Sec-Fetch-Site", "cross-site");
+            headers.set("Sec-Fetch-Mode", "cors");
+            headers.set("Sec-Fetch-Dest", "empty");
+            headers.set("Referer", "https://servicewechat.com/wx8f16a17a2e75284b/609/page-frame.html");
+            headers.set("Accept-Encoding", "gzip, deflate, br");
+            headers.set("Accept-Language", "zh-CN,zh;q=0.9");
+            headers.set("Priority", "u=1, i");
+
+            logEntry.setRequestHeaders(headers);
+            logEntry.setRequestBody(objectMapper.writeValueAsString(body));
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+
+            logEntry.setResponseCode(response.getStatusCodeValue());
+            logEntry.setResponseBody(response.getBody());
+            logEntry.setStatus(1);
+            logEntry.setDurationMs((int) (System.currentTimeMillis() - start));
+
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("网鱼网咖API调用失败: {}", apiName, e);
+            logEntry.setStatus(0);
+            logEntry.setErrorMsg(e.getMessage());
+            logEntry.setDurationMs((int) (System.currentTimeMillis() - start));
+
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("code", -1);
+            errorResult.put("msg", e.getMessage());
+            return errorResult;
+        } finally {
+            apiCallLogService.saveAsync(logEntry);
+        }
+    }
+
+    @Override
+    @Async("collectionExecutor")
+    public void executeWangyuCollection(Long configId) {
+        log.info("开始网鱼网咖采集任务: configId={}", configId);
+
+        ShopConfig config = shopConfigService.getById(configId);
+        if (config == null || config.getStatus() != 1 || config.getPlatformType() != 2) {
+            log.warn("配置不存在、已禁用或非网鱼网咖配置: configId={}", configId);
+            return;
+        }
+
+        LocalDateTime startTime = LocalDateTime.now();
+        DataCollectionTask task = createTask(configId, null, "WANGYU_SHOP_LIST");
+
+        try {
+            // 获取总页数和总数量
+            Map<String, Object> firstPage = getWangyuShopList(config, "", 1, 10);
+            if (firstPage == null || firstPage.get("data") == null) {
+                log.warn("网鱼网咖获取数据失败: configId={}", configId);
+                finishTask(task, TaskStatus.FAILED, startTime, "获取数据失败");
+                return;
+            }
+
+            Map<String, Object> data = (Map<String, Object>) firstPage.get("data");
+            Integer totalPages = getInteger(data, "totalPages");
+            Integer totalElements = getInteger(data, "totalElements");
+
+            log.info("网鱼网咖门店总数: configId={}, totalPages={}, totalElements={}", configId, totalPages, totalElements);
+
+            if (totalPages == null || totalPages <= 0) {
+                finishTask(task, TaskStatus.SUCCESS, startTime);
+                return;
+            }
+
+            // 分页获取所有门店
+            int page = 1;
+            int allSaved = 0;
+            List<Map<String, Object>> allStores = new ArrayList<>();
+
+            while (page <= totalPages) {
+                log.info("网鱼网咖采集第{}页: configId={}", page, configId);
+                Map<String, Object> pageResult = getWangyuShopList(config, "", page, 20);
+
+                if (pageResult == null || pageResult.get("data") == null) {
+                    log.warn("网鱼网咖获取第{}页失败: configId={}", page, configId);
+                    break;
+                }
+
+                Map<String, Object> pageData = (Map<String, Object>) pageResult.get("data");
+                List<Map<String, Object>> storeList = getStoreList(pageData);
+
+                if (storeList != null && !storeList.isEmpty()) {
+                    allStores.addAll(storeList);
+                    int saved = saveWangyuShopList(config, storeList);
+                    allSaved += saved;
+                    log.info("网鱼网咖第{}页保存完成: configId={}, 保存{}个门店", page, configId, saved);
+                }
+
+                // 最后一页或达到总页数
+                if (page >= totalPages) {
+                    break;
+                }
+
+                page++;
+                // 模拟翻页延迟 2-4秒
+                randomDelay(2000, 4000);
+            }
+
+            // Step 2: 遍历门店采集舱位/座位数据
+            log.info("网鱼网咖开始采集门店座位布局: configId={}, shopCount={}", configId, allStores.size());
+            for (Map<String, Object> shopData : allStores) {
+                String commonCode = getString(shopData, "commonCode");
+                if (commonCode == null || commonCode.isEmpty()) {
+                    continue;
+                }
+
+                // 获取对应的门店
+                ShopInfo shop = shopInfoService.getBySnbid(commonCode);
+                if (shop == null) {
+                    continue;
+                }
+
+                // 获取座位布局数据
+                try {
+                    Map<String, Object> layoutResult = getWangyuShopLayout(config, commonCode);
+                    if (layoutResult != null && layoutResult.containsKey("data")) {
+                        Map<String, Object> layoutData = (Map<String, Object>) layoutResult.get("data");
+                        List<Map<String, Object>> elements = getElementList(layoutData, "elements");
+
+                        if (elements != null && !elements.isEmpty()) {
+                            saveWangyuWithSnapshot(shop, elements, task.getId());
+                            log.info("网鱼网咖门店座位布局采集完成: shopId={}, shopName={}, elements={}",
+                                    shop.getId(), shop.getName(), elements.size());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("网鱼网咖门店座位布局采集失败: shopId={}, commonCode={}", shop.getId(), commonCode, e);
+                }
+
+                // 模拟用户浏览间隔 3-5秒
+                randomDelay(3000, 5000);
+            }
+
+            finishTask(task, TaskStatus.SUCCESS, startTime);
+            log.info("网鱼网咖采集任务完成: configId={}, 共保存{}个门店", configId, allSaved);
+        } catch (Exception e) {
+            log.error("网鱼网咖数据采集失败: configId={}", configId, e);
+            finishTask(task, TaskStatus.FAILED, startTime, e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> getStoreList(Map<String, Object> data) {
+        // 优先获取oftenAndCollectdList（常去和收藏的门店），其次获取otherStoreList
+        List<Map<String, Object>> storeList = new ArrayList<>();
+
+        if (data.containsKey("oftenAndCollectdList") && data.get("oftenAndCollectdList") instanceof List) {
+            List<Map<String, Object>> oftenList = (List<Map<String, Object>>) data.get("oftenAndCollectdList");
+            if (oftenList != null) {
+                storeList.addAll(oftenList);
+            }
+        }
+
+        if (data.containsKey("otherStoreList") && data.get("otherStoreList") instanceof List) {
+            List<Map<String, Object>> otherList = (List<Map<String, Object>>) data.get("otherStoreList");
+            if (otherList != null) {
+                storeList.addAll(otherList);
+            }
+        }
+
+        return storeList;
+    }
+
+    /**
+     * 保存网鱼网咖门店列表
+     * @return 保存的门店数量
+     */
+    private int saveWangyuShopList(ShopConfig config, List<Map<String, Object>> shopList) {
+        int saved = 0;
+        for (Map<String, Object> shopData : shopList) {
+            String commonCode = getString(shopData, "commonCode");
+            if (commonCode == null || commonCode.isEmpty()) {
+                continue;
+            }
+
+            ShopInfo shop = shopInfoService.getBySnbid(commonCode);
+            if (shop == null) {
+                shop = new ShopInfo();
+                shop.setConfigId(config.getId());
+                shop.setSnbid(commonCode);
+            }
+
+            // 映射网鱼网咖门店字段
+            shop.setName(getString(shopData, "shopName"));
+            shop.setAddress(getString(shopData, "address"));
+            shop.setShopId(getLong(shopData, "shopId"));
+
+            // 经纬度
+            String lat = getString(shopData, "shopLat");
+            String lng = getString(shopData, "shoplng");
+            if (lat != null && !lat.isEmpty()) {
+                try {
+                    shop.setLatitude(new BigDecimal(lat));
+                } catch (NumberFormatException ignored) {}
+            }
+            if (lng != null && !lng.isEmpty()) {
+                try {
+                    shop.setLongitude(new BigDecimal(lng));
+                } catch (NumberFormatException ignored) {}
+            }
+
+            // 距离
+            Double distance = getDouble(shopData, "targetDistance");
+            if (distance != null) {
+                // 距离单位是米，转换为公里存储
+                shop.setRawJson(shopData);
+            }
+
+            if (shop.getId() == null) {
+                shopInfoService.save(shop);
+            } else {
+                shopInfoService.updateById(shop);
+            }
+            saved++;
+        }
+        return saved;
+    }
+
+    private Double getDouble(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return null;
+        if (value instanceof Double) return (Double) value;
+        if (value instanceof Number) return ((Number) value).doubleValue();
+        try {
+            return Double.parseDouble(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    @Override
+    @Async("collectionExecutor")
+    public void executeAllWangyuCollection() {
+        log.info("开始执行所有网鱼网咖采集任务");
+
+        // 查询所有网鱼网咖配置
+        LambdaQueryWrapper<ShopConfig> wrapper = new LambdaQueryWrapper<ShopConfig>()
+                .eq(ShopConfig::getStatus, 1)
+                .eq(ShopConfig::getPlatformType, 2);
+        List<ShopConfig> configs = shopConfigService.list(wrapper);
+
+        for (ShopConfig config : configs) {
+            try {
+                self.executeWangyuCollection(config.getId());
+                randomDelay(3000, 5000);
+            } catch (Exception e) {
+                log.error("网鱼网咖采集失败: configId={}", config.getId(), e);
+            }
+        }
+    }
+
+    /**
+     * 网鱼网咖-获取门店座位布局
+     * 接口: POST /surf-internet/shop/v3/get
+     * 返回数据结构:
+     * - elements[]: 布局元素数组
+     *   - type: PRIVATE_ROOM(包间)、SEAT(座位)、SPACE(过道)、BAR_COUNTER(吧台)
+     *   - name: 元素名称（如包间名称）
+     *   - clientInfo[]: 机器信息数组
+     *     - clientNo: 机器编号
+     *     - status: 0=空闲, 1=占用
+     */
+    @Override
+    public Map<String, Object> getWangyuShopLayout(ShopConfig config, String storeCode) {
+        String url = "https://" + wangyuHost + "/surf-internet/shop/v3/get";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("storeCode", storeCode);
+        body.put("longitude", 104.043113);
+        body.put("latitude", 30.642419);
+
+        return callWangyuApi(config, url, body, "wangyu-shop-layout");
+    }
+
+    /**
+     * 保存网鱼网咖舱位/座位数据（带状态快照）
+     * 网鱼网咖结构: elements[] 中 PRIVATE_ROOM 对应银杏管家的舱位
+     * PRIVATE_ROOM 包含 clientInfo[]，通过 status 区分空闲/占用
+     */
+    private void saveWangyuWithSnapshot(ShopInfo shop, List<Map<String, Object>> elements, Long taskId) {
+        LocalDateTime snapshotTime = LocalDateTime.now();
+
+        // 创建门店快照
+        ShopStatusSnapshot snapshot = new ShopStatusSnapshot();
+        snapshot.setTaskId(taskId);
+        snapshot.setShopId(shop.getId());
+        snapshot.setSnapshotTime(snapshotTime);
+        snapshot.setRawJson(elements);
+        shopStatusSnapshotService.save(snapshot);
+
+        // 计算出的各状态机器数
+        int calculatedTotal = 0;
+        int freeMachines = 0;
+        int busyMachines = 0;
+
+        log.info("网鱼网咖机器计算明细: shopId={}, elements={}", shop.getId(), elements.size());
+
+        // 按区域（PRIVATE_ROOM包间）分组处理
+        // 先收集所有座位到对应区域
+        Map<String, List<Map<String, Object>>> areaMachinesMap = new LinkedHashMap<>();
+
+        for (Map<String, Object> element : elements) {
+            String type = getString(element, "type");
+            if (!"PRIVATE_ROOM".equals(type) && !"SEAT".equals(type)) {
+                continue;
+            }
+
+            String areaName = getString(element, "name");
+            if (areaName == null || areaName.isEmpty()) {
+                areaName = "大厅"; // SEAT类型默认为大厅
+            }
+
+            // 获取该元素下的机器列表
+            List<Map<String, Object>> clientInfoList = getElementList(element, "clientInfo");
+            if (clientInfoList == null || clientInfoList.isEmpty()) {
+                continue;
+            }
+
+            for (Map<String, Object> clientInfo : clientInfoList) {
+                String clientNo = getString(clientInfo, "clientNo");
+                Integer status = getInteger(clientInfo, "status"); // 0=空闲, 1=占用
+
+                if (clientNo == null || clientNo.isEmpty()) {
+                    continue;
+                }
+
+                // 收集到对应区域
+                areaMachinesMap.computeIfAbsent(areaName, k -> new ArrayList<>())
+                        .add(clientInfo);
+            }
+        }
+
+        // 遍历每个区域（包间/大厅）
+        for (Map.Entry<String, List<Map<String, Object>>> entry : areaMachinesMap.entrySet()) {
+            String areaName = entry.getKey();
+            List<Map<String, Object>> machines = entry.getValue();
+
+            // 创建或更新区域
+            ShopArea area = shopAreaMapper.selectOne(new LambdaQueryWrapper<ShopArea>()
+                    .eq(ShopArea::getShopId, shop.getId())
+                    .eq(ShopArea::getAreaName, areaName));
+            if (area == null) {
+                area = new ShopArea();
+                area.setShopId(shop.getId());
+                area.setAreaName(areaName);
+                area.setAllow(1);
+                shopAreaService.save(area);
+            }
+
+            int areaTotal = machines.size();
+            int areaBusy = 0;
+            int areaFree = 0;
+
+            for (Map<String, Object> clientInfo : machines) {
+                String clientNo = getString(clientInfo, "clientNo");
+                Integer status = getInteger(clientInfo, "status"); // 0=空闲, 1=占用
+
+                if (status != null && status == 1) {
+                    areaBusy++;
+                } else {
+                    areaFree++;
+                }
+
+                // 保存机器信息
+                MachineInfo machine = machineInfoService.getByShopIdAndComName(shop.getId(), clientNo);
+                if (machine == null) {
+                    machine = new MachineInfo();
+                    machine.setShopId(shop.getId());
+                    machine.setComName(clientNo);
+                }
+                machine.setAreaId(area.getId());
+                machine.setAreaName(areaName);
+
+                if (machine.getId() == null) {
+                    machineInfoService.save(machine);
+                } else {
+                    machineInfoService.updateById(machine);
+                }
+
+                // 保存机器状态历史
+                MachineStatusHistory history = new MachineStatusHistory();
+                history.setSnapshotId(snapshot.getId());
+                history.setTaskId(taskId);
+                history.setShopId(shop.getId());
+                history.setMachineId(machine.getId());
+                history.setComName(clientNo);
+                history.setAreaName(areaName);
+                // 状态: 0=占用, 1=空闲
+                history.setStatus(status != null && status == 1 ? 0 : 1);
+                history.setSnapshotTime(snapshotTime);
+                machineStatusHistoryService.save(history);
+            }
+
+            calculatedTotal += areaTotal;
+            freeMachines += areaFree;
+            busyMachines += areaBusy;
+
+            // 保存区域快照
+            AreaStatusSnapshot areaSnapshot = new AreaStatusSnapshot();
+            areaSnapshot.setSnapshotId(snapshot.getId());
+            areaSnapshot.setAreaName(areaName);
+            areaSnapshot.setTotalMachines(areaTotal);
+            areaSnapshot.setFreeMachines(areaFree);
+            areaSnapshot.setBusyMachines(areaBusy);
+            areaSnapshot.setSnapshotTime(snapshotTime);
+            areaStatusSnapshotService.save(areaSnapshot);
+
+            log.debug("网鱼网咖区域明细: shopId={}, area={}, total={}, free={}, busy={}",
+                    shop.getId(), areaName, areaTotal, areaFree, areaBusy);
+        }
+
+        // 更新门店快照中的统计信息
+        if (snapshot.getId() != null) {
+            snapshot.setTotalMachines(calculatedTotal);
+            snapshot.setFreeMachines(freeMachines);
+            snapshot.setBusyMachines(busyMachines);
+            shopStatusSnapshotService.updateById(snapshot);
+        }
+
+        log.info("网鱼网咖机器采集完成: shopId={}, total={}, free={}, busy={}",
+                shop.getId(), calculatedTotal, freeMachines, busyMachines);
+    }
+
+    /**
+     * 获取Map中List类型的字段
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> getElementList(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof List) {
+            return (List<Map<String, Object>>) value;
+        }
+        return null;
     }
 
     /**

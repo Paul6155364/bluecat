@@ -136,4 +136,49 @@ public interface LaobanApiService {
      * 银杏管家-执行所有银杏管家配置的采集
      */
     void executeAllYinxingCollection();
+
+    // ========== 网鱼网咖采集接口 ==========
+
+    /**
+     * 网鱼网咖-测试连接
+     *
+     * @param config 网吧配置
+     * @return 测试结果
+     */
+    Map<String, Object> testWangyu(ShopConfig config);
+
+    /**
+     * 网鱼网咖-获取门店列表
+     *
+     * @param config  网吧配置
+     * @param keyword 搜索关键词（可选）
+     * @param page    页码
+     * @param pageSize 每页条数
+     * @return 门店列表
+     */
+    Map<String, Object> getWangyuShopList(ShopConfig config, String keyword, Integer page, Integer pageSize);
+
+    /**
+     * 网鱼网咖-执行采集任务
+     *
+     * @param configId 网吧配置ID
+     */
+    void executeWangyuCollection(Long configId);
+
+    /**
+     * 网鱼网咖-获取门店座位布局
+     * 接口: POST /surf-internet/shop/v3/get
+     * 返回elements[]数组，包含PRIVATE_ROOM(包间)、SEAT(座位)、SPACE(过道)等元素
+     * 每个PRIVATE_ROOM包含clientInfo数组，clientNo为机器编号，status为状态(0=空闲,1=占用)
+     *
+     * @param config    网吧配置
+     * @param storeCode 门店编码(commonCode)
+     * @return 座位布局数据（包含elements数组）
+     */
+    Map<String, Object> getWangyuShopLayout(ShopConfig config, String storeCode);
+
+    /**
+     * 网鱼网咖-执行所有网鱼网咖配置的采集
+     */
+    void executeAllWangyuCollection();
 }

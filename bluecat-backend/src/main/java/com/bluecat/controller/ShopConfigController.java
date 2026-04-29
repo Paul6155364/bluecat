@@ -1,6 +1,7 @@
 package com.bluecat.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bluecat.common.PageResult;
 import com.bluecat.common.Result;
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -118,6 +121,28 @@ public class ShopConfigController {
         }
     }
 
+    @ApiOperation("网鱼网咖-测试连接")
+    @PostMapping("/test-wangyu/{id}")
+    public Result<Map<String, Object>> testWangyu(@PathVariable Long id) {
+        ShopConfig config = shopConfigService.getById(id);
+        if (config == null) {
+            return Result.error("配置不存在");
+        }
+        if (config.getPlatformType() != 2) {
+            return Result.error("该配置不是网鱼网咖平台");
+        }
+        Map<String, Object> result = laobanApiService.testWangyu(config);
+        if (result != null && result.get("code") != null) {
+            Integer code = (Integer) result.get("code");
+            if (code == 0) {
+                return Result.success("连接成功", result);
+            } else {
+                return Result.error("连接失败: " + result.get("message"));
+            }
+        }
+        return Result.error("连接失败，请检查网络或配置");
+    }
+
     @ApiOperation("新增配置")
     @PostMapping
     public Result<Void> save(@RequestBody ShopConfig config) {
@@ -160,5 +185,72 @@ public class ShopConfigController {
         config.setStatus(status);
         shopConfigService.updateById(config);
         return Result.success(status == 1 ? "启用成功" : "禁用成功");
+    }
+
+    @ApiOperation("一键校验平台Token有效性")
+    @PostMapping("/batch-check/{platformType}")
+    public Result<List<Map<String, Object>>> batchCheckToken(@PathVariable Integer platformType) {
+        List<ShopConfig> configs = shopConfigService.list(new LambdaQueryWrapper<ShopConfig>()
+                .eq(ShopConfig::getPlatformType, platformType)
+                .eq(ShopConfig::getStatus, 1));
+
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (ShopConfig config : configs) {
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("id", config.getId());
+            item.put("configName", config.getConfigName());
+            item.put("platformType", config.getPlatformType());
+            item.put("tokenExpireTime", config.getTokenExpireTime());
+
+            try {
+                boolean valid = false;
+                String msg = "";
+
+                if (platformType == 2) {
+                    // 网鱼网咖
+                    Map<String, Object> result = laobanApiService.testWangyu(config);
+                    if (result != null && result.get("code") != null) {
+                        Integer code = (Integer) result.get("code");
+                        valid = code == 0;
+                        msg = valid ? "Token有效" : String.valueOf(result.get("message"));
+                    } else {
+                        msg = "连接失败";
+                    }
+                } else if (platformType == 1) {
+                    // 银杏管家
+                    Map<String, Object> result = laobanApiService.testYinxing(config);
+                    if (result != null && result.get("code") != null) {
+                        Integer code = (Integer) result.get("code");
+                        valid = code == 0;
+                        if (code == -201) {
+                            msg = "Cookie已失效，请重新获取";
+                        } else {
+                            msg = valid ? "Token有效" : String.valueOf(result.get("msg"));
+                        }
+                    } else {
+                        msg = "连接失败";
+                    }
+                } else {
+                    // x管家
+                    Map<String, Object> result = laobanApiService.testToken(config);
+                    if (result != null && result.get("code") != null) {
+                        Integer code = (Integer) result.get("code");
+                        valid = code == 0;
+                        msg = valid ? "Token有效" : String.valueOf(result.get("msg"));
+                    } else {
+                        msg = "连接失败";
+                    }
+                }
+
+                item.put("valid", valid);
+                item.put("message", msg);
+            } catch (Exception e) {
+                item.put("valid", false);
+                item.put("message", "校验异常: " + e.getMessage());
+            }
+            results.add(item);
+        }
+
+        return Result.success(results);
     }
 }

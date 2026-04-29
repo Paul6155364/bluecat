@@ -30,7 +30,7 @@ public class ShopConfig extends BaseEntity {
     @ApiModelProperty("网吧主账号snbid")
     private String snbid;
 
-    @ApiModelProperty("平台类型:0=x管家,1=银杏管家")
+    @ApiModelProperty("平台类型:0=x管家,1=银杏管家,2=网鱼网咖")
     private Integer platformType;
 
     @ApiModelProperty("AppID")
