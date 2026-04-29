@@ -159,6 +159,17 @@ public interface LaobanApiService {
     Map<String, Object> getWangyuShopList(ShopConfig config, String keyword, Integer page, Integer pageSize);
 
     /**
+     * 网鱼网咖-获取门店详情
+     * 接口: GET /asset-web/shop/store/portal/detail?commonCode=xxx
+     * 返回门店详情数据，包含shopName、address、province、city、regional等
+     *
+     * @param config     网吧配置
+     * @param commonCode 门店编码
+     * @return 门店详情数据
+     */
+    Map<String, Object> getWangyuShopDetail(ShopConfig config, String commonCode);
+
+    /**
      * 网鱼网咖-执行采集任务
      *
      * @param configId 网吧配置ID
