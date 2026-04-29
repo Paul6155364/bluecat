@@ -18,9 +18,9 @@ spring:
 
   # 数据源配置
   datasource:
-    url: jdbc:mysql://125.69.67.246:3306/bluecat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://125.69.67.246:27306/bluecat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
     username: root
-    password: root123
+    password: Root@2026#MySQL!
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 5

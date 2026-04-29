@@ -768,7 +768,7 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             Integer totalElements = getInteger(data, "totalElements");
 
             // 只采集前78个门店，超过的是其他地区的门店不需要
-            int maxShops = 1;
+            int maxShops = 78;
 
             log.info("网鱼网咖门店总数: configId={}, totalPages={}, totalElements={}, 限制采集={}", configId, totalPages, totalElements, maxShops);
 
