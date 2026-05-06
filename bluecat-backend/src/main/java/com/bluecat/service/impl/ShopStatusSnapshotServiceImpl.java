@@ -40,7 +40,7 @@ public class ShopStatusSnapshotServiceImpl extends ServiceImpl<ShopStatusSnapsho
     public List<ShopStatusSnapshot> listLatestAll() {
         LambdaQueryWrapper<ShopStatusSnapshot> wrapper = new LambdaQueryWrapper<ShopStatusSnapshot>()
                 .inSql(ShopStatusSnapshot::getId, 
-                        "SELECT MAX(id) FROM shop_status_snapshot GROUP BY shop_id")
+                        "SELECT id FROM shop_status_snapshot WHERE (shop_id, snapshot_time) IN (SELECT shop_id, MAX(snapshot_time) FROM shop_status_snapshot GROUP BY shop_id)")
                 .orderByDesc(ShopStatusSnapshot::getOccupancyRate);
         return list(wrapper);
     }

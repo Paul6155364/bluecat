@@ -45,14 +45,21 @@ public class AnalysisController {
     @ApiOperation("门店PK对比数据")
     @GetMapping("/pk/shops")
     public Result<Map<String, Object>> pkShops(
-            @RequestParam List<Long> shopIds,
+            @RequestParam String shopIds,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+
+        // 解析逗号分隔的 shopIds 字符串
+        List<Long> shopIdList = Arrays.stream(shopIds.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(Collectors.toList());
 
         Map<String, Object> result = new HashMap<>();
         List<Map<String, Object>> shopDataList = new ArrayList<>();
 
-        for (Long shopId : shopIds) {
+        for (Long shopId : shopIdList) {
             ShopInfo shop = shopInfoService.getById(shopId);
             if (shop == null) { continue; }
 
@@ -83,7 +90,7 @@ public class AnalysisController {
             if (endTime != null) {
                 wrapper.le(ShopStatusSnapshot::getSnapshotTime, endTime);
             }
-            wrapper.orderByDesc(ShopStatusSnapshot::getSnapshotTime).last("LIMIT 100");
+            wrapper.orderByDesc(ShopStatusSnapshot::getSnapshotTime);
 
             List<ShopStatusSnapshot> snapshots = shopStatusSnapshotService.list(wrapper);
             if (!snapshots.isEmpty()) {

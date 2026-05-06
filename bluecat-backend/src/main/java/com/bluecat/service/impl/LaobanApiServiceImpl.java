@@ -472,10 +472,8 @@ public class LaobanApiServiceImpl implements LaobanApiService {
                 // chainId用config.getSnbid()（连锁机构ID），mchId用chains返回的id（单门店ID）
                 String chainId = config.getSnbid();
                 YinxingRoomResult roomResult = getYinxingRoomInfo(config, null, chainId, mchId);
-                if (!roomResult.getRoomList().isEmpty()) {
-                    // 检查舱位数据是否返回了失效标识
-                    saveYinxingWithSnapshot(shop, roomResult.getRoomList(), roomResult.getExt(), task.getId());
-                }
+                // 无论舱位数据是否为空，都保存快照（确保每个门店都有快照记录）
+                saveYinxingWithSnapshot(shop, roomResult.getRoomList(), roomResult.getExt(), task.getId());
 
                 // 模拟用户浏览完一个门店后，切换到下一个门店 5-10秒
                 randomDelay(5000, 10000);
@@ -884,6 +882,10 @@ public class LaobanApiServiceImpl implements LaobanApiService {
                                 saveWangyuWithSnapshot(shop, allElements, elementIdToAreaName, task.getId());
                                 log.info("网鱼网咖门店座位布局采集完成: shopId={}, shopName={}, areas={}, elements={}",
                                         shop.getId(), shop.getName(), areas.size(), allElements.size());
+                            } else {
+                                // 即使没有座位数据，也保存空快照（确保每个门店都有快照记录）
+                                saveWangyuWithSnapshot(shop, new ArrayList<>(), elementIdToAreaName, task.getId());
+                                log.warn("网鱼网咖门店无座位数据: shopId={}, commonCode={}", shop.getId(), commonCode);
                             }
                         }
                     }
@@ -1219,6 +1221,13 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             snapshot.setTotalMachines(calculatedTotal);
             snapshot.setFreeMachines(freeMachines);
             snapshot.setBusyMachines(busyMachines);
+            // 计算上座率 = busyMachines / totalMachines × 100%
+            if (calculatedTotal > 0) {
+                BigDecimal rate = BigDecimal.valueOf(busyMachines)
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(BigDecimal.valueOf(calculatedTotal), 2, RoundingMode.HALF_UP);
+                snapshot.setOccupancyRate(rate);
+            }
             shopStatusSnapshotService.updateById(snapshot);
         }
 
