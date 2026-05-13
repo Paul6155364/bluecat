@@ -1,0 +1,672 @@
+curl -H ':method: GET' -H ':authority: chain24819.tmwanba.com' -H ':scheme: https' -H ':path: /dingzuo/item?referrer=https%3A%2F%2Fchain24819.tmwanba.com%2Frelease209%2F%23%2Fselect-seat-new%3Fname%3D%25E6%2596%25B0%25E9%25A2%2584%25E7%25BA%25A6%25E8%25AE%25A2%25E5%25BA%25A7-%25E5%25A4%259A%25E4%25BA%25BA%26balance_ways%3D0%26showMchDetailBtn%3Dtrue%26user%3D%255Bobject%2520Object%255D%26mch_id%3D43248%26chain_id%3D43132%26amount_ways%3D1%26num%3D6%26phone%3D%26showSelectSeat%3D1%26sss%3D0%26hours%3D0%26setQuery%3Dtrue%26mchlock%3D0%26onlyOrderSeat%3Dtrue%26onlyBaojian%3Dfalse%26onlyHotel%3Dfalse%26onlyCode%3Dfalse' -H 'x-requested-with: XMLHttpRequest' -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) MacWechat/3.8.7(0x13080712) UnifiedPCMacWechat(0xf2641702) XWEB/18788 Flue' -H 'accept: application/json, text/javascript, */*; q=0.01' -H 'content-type: application/x-www-form-urlencoded' -H 'sec-fetch-site: same-origin' -H 'sec-fetch-mode: cors' -H 'sec-fetch-dest: empty' -H 'referer: https://chain24819.tmwanba.com/release209/' -H 'accept-encoding: gzip, deflate, br' -H 'accept-language: zh-CN,zh;q=0.9' -H 'cookie: Hm_lvt_a74f7486b06667dba4c91299dbb5c683=1777253202' -H 'cookie: HMACCOUNT=B4D777DC7E840C5F' -H 'cookie: chain-id=43132' -H 'cookie: chain=1j9fjabeoo962fp5v606nng51m' -H 'cookie: Hm_lpvt_a74f7486b06667dba4c91299dbb5c683=1777253486' -H 'priority: u=1, i' 'https://chain24819.tmwanba.com/dingzuo/item?referrer=https%3A%2F%2Fchain24819.tmwanba.com%2Frelease209%2F%23%2Fselect-seat-new%3Fname%3D%25E6%2596%25B0%25E9%25A2%2584%25E7%25BA%25A6%25E8%25AE%25A2%25E5%25BA%25A7-%25E5%25A4%259A%25E4%25BA%25BA%26balance_ways%3D0%26showMchDetailBtn%3Dtrue%26user%3D%255Bobject%2520Object%255D%26mch_id%3D43248%26chain_id%3D43132%26amount_ways%3D1%26num%3D6%26phone%3D%26showSelectSeat%3D1%26sss%3D0%26hours%3D0%26setQuery%3Dtrue%26mchlock%3D0%26onlyOrderSeat%3Dtrue%26onlyBaojian%3Dfalse%26onlyHotel%3Dfalse%26onlyCode%3Dfalse'
+{
+	"code": 0,
+	"msg": "操作成功",
+	"data": [{
+		"id": "1773",
+		"name": "狂热游戏B区",
+		"type": "0",
+		"on_machine": ["NYFZ174", "NYFZ179", "NYFZ182", "NYFZ184", "NYFZ185", "NYFZ186", "NYFZ188", "NYFZ189", "NYFZ190", "NYFZ193", "NYFZ195"],
+		"off_machine": ["NYFZ175", "NYFZ176", "NYFZ177", "NYFZ178", "NYFZ180", "NYFZ181", "NYFZ183", "NYFZ187", "NYFZ191", "NYFZ192", "NYFZ194", "NYFZ196", "NYFZ197", "NYFZ198"],
+		"subscribe_machine": [],
+		"des": "显示器：曲面144Hz，显卡：2070",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1774",
+		"name": "私享卡座区",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ127", "NYFZ128", "NYFZ129", "NYFZ130", "NYFZ131", "NYFZ132", "NYFZ133", "NYFZ134", "NYFZ135", "NYFZ136", "NYFZ137", "NYFZ138"],
+		"subscribe_machine": [],
+		"des": "显示器：曲面144Hz，显卡：3060",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1775",
+		"name": "狂热游戏A区",
+		"type": "0",
+		"on_machine": ["NYFZ155", "NYFZ159", "NYFZ162", "NYFZ163", "NYFZ165", "NYFZ168", "NYFZ173"],
+		"off_machine": ["NYFZ154", "NYFZ156", "NYFZ157", "NYFZ158", "NYFZ160", "NYFZ161", "NYFZ164", "NYFZ166", "NYFZ167", "NYFZ169", "NYFZ170", "NYFZ171", "NYFZ172"],
+		"subscribe_machine": [],
+		"des": "显示器：曲面144Hz ，显卡：3060 ，",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1776",
+		"name": "舒适VIP包房",
+		"type": "0",
+		"on_machine": ["NYFZ207", "NYFZ215"],
+		"off_machine": ["NYFZ208", "NYFZ209", "NYFZ210", "NYFZ211", "NYFZ212", "NYFZ213", "NYFZ214"],
+		"subscribe_machine": [],
+		"des": "显示器：曲面144hz  显卡：2080",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1777",
+		"name": "IPS电竞区",
+		"type": "0",
+		"on_machine": ["NYFZ139", "NYFZ147", "NYFZ148", "NYFZ150"],
+		"off_machine": ["NYFZ140", "NYFZ141", "NYFZ142", "NYFZ143", "NYFZ144", "NYFZ145", "NYFZ146", "NYFZ149", "NYFZ151", "NYFZ152", "NYFZ153"],
+		"subscribe_machine": [],
+		"des": "显示器：华硕27直面144hz， 显卡： 2080",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1778",
+		"name": "  FPS游戏顶级体验区",
+		"type": "0",
+		"on_machine": ["NYFZ035", "NYFZ040", "NYFZ041"],
+		"off_machine": ["NYFZ027", "NYFZ028", "NYFZ029", "NYFZ030", "NYFZ031", "NYFZ032", "NYFZ033", "NYFZ034", "NYFZ036", "NYFZ037", "NYFZ038", "NYFZ039", "NYFZ042", "NYFZ043", "NYFZ044"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威1K240Hz ，显卡3070  3080",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1779",
+		"name": "  职业舞台竞技区",
+		"type": "0",
+		"on_machine": ["NYFZ004", "NYFZ009", "NYFZ014", "NYFZ015", "NYFZ016"],
+		"off_machine": ["NYFZ001", "NYFZ002", "NYFZ003", "NYFZ005", "NYFZ006", "NYFZ007", "NYFZ008", "NYFZ010", "NYFZ011", "NYFZ012", "NYFZ013"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威1K240Hz ，显卡4070s",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1780",
+		"name": "外星人游戏专区",
+		"type": "0",
+		"on_machine": ["NYFZ021", "NYFZ025"],
+		"off_machine": ["NYFZ017", "NYFZ018", "NYFZ019", "NYFZ020", "NYFZ022", "NYFZ023", "NYFZ024", "NYFZ026", "NYFZ078", "NYFZ079"],
+		"subscribe_machine": [],
+		"des": "显示器：外星人25寸1K240HZ ，显卡：3090",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1781",
+		"name": "定制VIP1号包房",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ232", "NYFZ233"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威240HZ,  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": [],
+		"bj_machine": [{
+			"seat": "NYFZ232",
+			"kid": "79",
+			"name": "定制VIP1号包房"
+		}, {
+			"seat": "NYFZ233",
+			"kid": "79",
+			"name": "定制VIP1号包房"
+		}]
+	}, {
+		"id": "1782",
+		"name": "定制VIP2号包房",
+		"type": "0",
+		"on_machine": ["NYFZ236"],
+		"off_machine": [],
+		"subscribe_machine": [],
+		"des": "显示器：卓威240HZ,  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": [],
+		"bj_machine": [{
+			"seat": "NYFZ236",
+			"kid": "174",
+			"name": "定制VIP2号包房"
+		}]
+	}, {
+		"id": "1783",
+		"name": "定制VIP3号包房",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ234", "NYFZ235"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威240HZ,  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": [],
+		"bj_machine": [{
+			"seat": "NYFZ234",
+			"kid": "223",
+			"name": "定制VIP3号包房"
+		}, {
+			"seat": "NYFZ235",
+			"kid": "223",
+			"name": "定制VIP3号包房"
+		}]
+	}, {
+		"id": "1784",
+		"name": "定制VIP6号包房",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ237", "NYFZ238"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威240HZ,  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": [],
+		"bj_machine": [{
+			"seat": "NYFZ237",
+			"kid": "81",
+			"name": "定制VIP6号包房"
+		}, {
+			"seat": "NYFZ238",
+			"kid": "81",
+			"name": "定制VIP6号包房"
+		}]
+	}, {
+		"id": "1785",
+		"name": "定制VIP8号包房",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ239", "NYFZ240"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威240HZ,  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": [],
+		"bj_machine": [{
+			"seat": "NYFZ239",
+			"kid": "83",
+			"name": "定制VIP8号包房"
+		}, {
+			"seat": "NYFZ240",
+			"kid": "83",
+			"name": "定制VIP8号包房"
+		}]
+	}, {
+		"id": "1786",
+		"name": "  定制VIP5号包房",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ241", "NYFZ242"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威240HZ,  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": [],
+		"bj_machine": [{
+			"seat": "NYFZ241",
+			"kid": "84",
+			"name": "定制VIP5包房"
+		}, {
+			"seat": "NYFZ242",
+			"kid": "84",
+			"name": "定制VIP5包房"
+		}]
+	}, {
+		"id": "1787",
+		"name": "定制VIP7号包房",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ243", "NYFZ244"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威240HZ,  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": [],
+		"bj_machine": [{
+			"seat": "NYFZ243",
+			"kid": "222",
+			"name": "定制VIP7号包房"
+		}, {
+			"seat": "NYFZ244",
+			"kid": "222",
+			"name": "定制VIP7号包房"
+		}]
+	}, {
+		"id": "3885",
+		"name": "单人定制包卓威240",
+		"type": "0",
+		"on_machine": ["NYFZ049", "NYFZ061", "NYFZ063"],
+		"off_machine": ["NYFZ045", "NYFZ046", "NYFZ047", "NYFZ048", "NYFZ050", "NYFZ051", "NYFZ052", "NYFZ053", "NYFZ054", "NYFZ055", "NYFZ056", "NYFZ057", "NYFZ058", "NYFZ059", "NYFZ060", "NYFZ062"],
+		"subscribe_machine": [],
+		"des": "卓威240HZ   4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "3886",
+		"name": "单人定制包外星人360",
+		"type": "0",
+		"on_machine": ["NYFZ068"],
+		"off_machine": ["NYFZ064", "NYFZ065", "NYFZ066", "NYFZ067", "NYFZ069", "NYFZ070"],
+		"subscribe_machine": [],
+		"des": "外星人2K360HZ  5080",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "3887",
+		"name": "单人定制包卓威540",
+		"type": "0",
+		"on_machine": ["NYFZ073"],
+		"off_machine": ["NYFZ071", "NYFZ072", "NYFZ074", "NYFZ075", "NYFZ076", "NYFZ077"],
+		"subscribe_machine": [],
+		"des": "卓威540HZ  5080",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4030",
+		"name": "卓威定制双人包",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ199", "NYFZ200"],
+		"subscribe_machine": [],
+		"des": "显示器:卓威360HZ  ,显卡：4080",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": [],
+		"bj_machine": [{
+			"seat": "NYFZ199",
+			"kid": "579",
+			"name": "定制VIP9号包房"
+		}, {
+			"seat": "NYFZ200",
+			"kid": "579",
+			"name": "定制VIP9号包房"
+		}]
+	}, {
+		"id": "4031",
+		"name": "卓威定制六人包",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ201", "NYFZ202", "NYFZ203", "NYFZ204", "NYFZ205", "NYFZ206"],
+		"subscribe_machine": [],
+		"des": "显示器:卓威600HZ,显卡：4080",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4293",
+		"name": "爱攻定制包",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ216", "NYFZ217", "NYFZ218", "NYFZ219", "NYFZ220", "NYFZ221", "NYFZ222", "NYFZ223", "NYFZ224", "NYFZ225"],
+		"subscribe_machine": [],
+		"des": "显示器:2k260HZ，1K390hz，   显卡：4060TI",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4294",
+		"name": "卓威六人包",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["NYFZ226", "NYFZ227", "NYFZ228", "NYFZ229", "NYFZ230", "NYFZ231"],
+		"subscribe_machine": [],
+		"des": "显示器:卓威360HZ  530HZ,显卡：4080",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}],
+	"ext": {
+		"frp_url": "60d04178ee03943248.tun24819.tmwanba.com",
+		"forbid": 0,
+		"mch_id": 43248,
+		"uid": 27644392,
+		"user_grade": 100,
+		"now_time": 1777253547,
+		"last_time": 1777296747,
+		"seat_show": 2,
+		"total": 197,
+		"online_num": 40,
+		"auto_close": 0,
+		"limitNum": 6,
+		"moreguide": 0,
+		"fullLineup": 1,
+		"tel": "19934478504",
+		"hardware": 0
+	}
+}
+curl -H ':method: GET' -H ':authority: chain24819.tmwanba.com' -H ':scheme: https' -H ':path: /dingzuo/item?referrer=https%3A%2F%2Fchain24819.tmwanba.com%2Frelease209%2F%23%2Fselect-seat-new%3Fmch_id%3D43254%26chain_id%3D43132%26num%3D6%26phone%3D%26showSelectSeat%3D1%26sss%3D0%26hours%3D0%26name%3D%25E6%2596%25B0%25E9%25A2%2584%25E7%25BA%25A6%25E8%25AE%25A2%25E5%25BA%25A7-%25E5%25A4%259A%25E4%25BA%25BA%26balance_ways%3D0%26showMchDetailBtn%3Dtrue%26user%3D%255Bobject%2520Object%255D%26amount_ways%3D1%26setQuery%3Dtrue%26mchlock%3D0%26onlyOrderSeat%3D1%26onlyBaojian%3Dfalse%26onlyHotel%3Dfalse%26onlyCode%3Dfalse%26source%3Dmenu%26type%3Dorder-seat-new' -H 'x-requested-with: XMLHttpRequest' -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) MacWechat/3.8.7(0x13080712) UnifiedPCMacWechat(0xf2641702) XWEB/18788 Flue' -H 'accept: application/json, text/javascript, */*; q=0.01' -H 'content-type: application/x-www-form-urlencoded' -H 'sec-fetch-site: same-origin' -H 'sec-fetch-mode: cors' -H 'sec-fetch-dest: empty' -H 'referer: https://chain24819.tmwanba.com/release209/' -H 'accept-encoding: gzip, deflate, br' -H 'accept-language: zh-CN,zh;q=0.9' -H 'cookie: Hm_lvt_a74f7486b06667dba4c91299dbb5c683=1777253202' -H 'cookie: HMACCOUNT=B4D777DC7E840C5F' -H 'cookie: chain-id=43132' -H 'cookie: chain=1j9fjabeoo962fp5v606nng51m' -H 'cookie: Hm_lpvt_a74f7486b06667dba4c91299dbb5c683=1777253486' -H 'priority: u=1, i' 'https://chain24819.tmwanba.com/dingzuo/item?referrer=https%3A%2F%2Fchain24819.tmwanba.com%2Frelease209%2F%23%2Fselect-seat-new%3Fmch_id%3D43254%26chain_id%3D43132%26num%3D6%26phone%3D%26showSelectSeat%3D1%26sss%3D0%26hours%3D0%26name%3D%25E6%2596%25B0%25E9%25A2%2584%25E7%25BA%25A6%25E8%25AE%25A2%25E5%25BA%25A7-%25E5%25A4%259A%25E4%25BA%25BA%26balance_ways%3D0%26showMchDetailBtn%3Dtrue%26user%3D%255Bobject%2520Object%255D%26amount_ways%3D1%26setQuery%3Dtrue%26mchlock%3D0%26onlyOrderSeat%3D1%26onlyBaojian%3Dfalse%26onlyHotel%3Dfalse%26onlyCode%3Dfalse%26source%3Dmenu%26type%3Dorder-seat-new'
+{
+	"code": 0,
+	"msg": "操作成功",
+	"data": [{
+		"id": "1813",
+		"name": "竞技区",
+		"type": "0",
+		"on_machine": ["GN052", "GN054", "GN058", "GN061", "GN073"],
+		"off_machine": ["GN041", "GN042", "GN043", "GN044", "GN045", "GN046", "GN047", "GN048", "GN049", "GN050", "GN051", "GN053", "GN055", "GN056", "GN057", "GN059", "GN060", "GN062", "GN063", "GN064", "GN065", "GN066", "GN067", "GN068", "GN069", "GN070", "GN071", "GN072", "GN074", "GN075"],
+		"subscribe_machine": [],
+		"des": "显示器：2K300  显卡：4070",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1814",
+		"name": "电竞三人包",
+		"type": "0",
+		"on_machine": ["GN029"],
+		"off_machine": ["GN030", "GN031"],
+		"subscribe_machine": [],
+		"des": "显示器：蚂蚁2k300hz  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1815",
+		"name": "电竞四人包",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["GN037", "GN038", "GN039", "GN040"],
+		"subscribe_machine": [],
+		"des": "显示器：爱攻540hz 显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1816",
+		"name": "电竞双人包",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["GN080", "GN081", "GN082", "GN083", "GN084", "GN085", "GN086", "GN087"],
+		"subscribe_machine": [],
+		"des": "显示器：2K300  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": [],
+		"bj_machine": [{
+			"seat": "GN080",
+			"kid": "742",
+			"name": "5号双人包"
+		}, {
+			"seat": "GN081",
+			"kid": "742",
+			"name": "5号双人包"
+		}, {
+			"seat": "GN082",
+			"kid": "743",
+			"name": "6号双人包"
+		}, {
+			"seat": "GN083",
+			"kid": "743",
+			"name": "6号双人包"
+		}, {
+			"seat": "GN084",
+			"kid": "744",
+			"name": "7号双人包"
+		}, {
+			"seat": "GN085",
+			"kid": "744",
+			"name": "7号双人包"
+		}, {
+			"seat": "GN086",
+			"kid": "745",
+			"name": "8号双人包"
+		}, {
+			"seat": "GN087",
+			"kid": "745",
+			"name": "8号双人包"
+		}]
+	}, {
+		"id": "1817",
+		"name": "卓威对战区",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["GN011", "GN012", "GN013", "GN014", "GN015", "GN016", "GN017", "GN018", "GN019", "GN020", "GN021", "GN022"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威400  显卡：4080S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "1818",
+		"name": "外星人对战区",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["GN001", "GN002", "GN003", "GN004", "GN005", "GN006", "GN007", "GN008", "GN009", "GN010"],
+		"subscribe_machine": [],
+		"des": "显示器：外星人2K360  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4538",
+		"name": "卓威六人B级包",
+		"type": "0",
+		"on_machine": ["GN027"],
+		"off_machine": ["GN023", "GN024", "GN025", "GN026", "GN028"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威600HZ  显卡：5080",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4539",
+		"name": "卓威五人B级包",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["GN032", "GN033", "GN034", "GN035", "GN036"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威540HZ  显卡：4080S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4540",
+		"name": "舒适单人包",
+		"type": "0",
+		"on_machine": ["GN076", "GN078", "GN079"],
+		"off_machine": ["GN077", "GN088", "GN089"],
+		"subscribe_machine": [],
+		"des": "显示器：2K300  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4541",
+		"name": "OLED单人包",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["GN090", "GN091", "GN092", "GN093", "GN094", "GN095", "GN096"],
+		"subscribe_machine": [],
+		"des": "显示器:OLED2K480 显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4542",
+		"name": "极致单人包",
+		"type": "0",
+		"on_machine": ["GN121"],
+		"off_machine": ["GN115", "GN116", "GN117", "GN118", "GN119", "GN120", "GN122"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威400 显卡：4080S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4543",
+		"name": "极致双屏单包",
+		"type": "0",
+		"on_machine": [],
+		"off_machine": ["GN113", "GN114"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威400/2K300 显卡：4080S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4544",
+		"name": "卓威单人包",
+		"type": "0",
+		"on_machine": ["GN108"],
+		"off_machine": ["GN105", "GN106", "GN107", "GN109", "GN110", "GN111", "GN112"],
+		"subscribe_machine": [],
+		"des": "显示器：卓威240HZ  显卡：4070S",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "4762",
+		"name": "卓威600HZ单人包",
+		"type": "0",
+		"on_machine": ["GN126"],
+		"off_machine": ["GN123", "GN124", "GN125"],
+		"subscribe_machine": [],
+		"des": "CPU:9800×3d   显卡：5080   显示器：卓威600hz",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}, {
+		"id": "5430",
+		"name": "蚂蚁单人包",
+		"type": "0",
+		"on_machine": ["GN103", "GN104"],
+		"off_machine": ["GN097", "GN098", "GN099", "GN100", "GN101", "GN102"],
+		"subscribe_machine": [],
+		"des": "蚂蚁2k300hz",
+		"ico": 0,
+		"fee": 20,
+		"lianzuo": []
+	}],
+	"ext": {
+		"frp_url": "60d04d6496df043253.tun24819.tmwanba.com",
+		"forbid": 0,
+		"mch_id": 43253,
+		"uid": 27644392,
+		"user_grade": 100,
+		"now_time": 1777253686,
+		"last_time": 1777426486,
+		"seat_show": 2,
+		"total": 126,
+		"online_num": 15,
+		"auto_close": 0,
+		"limitNum": 6,
+		"moreguide": 0,
+		"fullLineup": 1,
+		"tel": "18980433052",
+		"hardware": 0
+	}
+}
+# chain24819.tmwanba.com 订座座位接口分析文档
+## 1. 接口基础信息
+| 项目 | 内容 |
+| ---- | ---- |
+| 请求地址 | `https://chain24819.tmwanba.com/dingzuo/item` |
+| 请求方式 | GET |
+| 协议版本 | HTTP/2（携带`:`开头伪请求头） |
+| 业务归属 | 天梦网吧连锁管理系统 |
+| 核心作用 | 获取门店全区域、机位状态、硬件配置、计费、全局门店信息 |
+| 调用来源 | PC微信内置浏览器 异步Ajax请求 |
+
+## 2. 完整请求CURL
+```bash
+curl -H ':method: GET' \
+-H ':authority: chain24819.tmwanba.com' \
+-H ':scheme: https' \
+-H ':path: /dingzuo/item?referrer=https%3A%2F%2Fchain24819.tmwanba.com%2Frelease209%2F%23%2Fselect-seat-new%3Fmch_id%3D43254%26chain_id%3D43132%26num%3D6%26phone%3D%26showSelectSeat%3D1%26sss%3D0%26hours%3D0%26name%3D%25E6%2596%25B0%25E9%25A2%2584%25E7%25BA%25A6%25E8%25AE%25A2%25E5%25BA%25A7-%25E5%25A4%259A%25E4%25BA%25BA%26balance_ways%3D0%26showMchDetailBtn%3Dtrue%26user%3D%255Bobject%2520Object%255D%26amount_ways%3D1%26setQuery%3Dtrue%26mchlock%3D0%26onlyOrderSeat%3D1%26onlyBaojian%3Dfalse%26onlyHotel%3Dfalse%26onlyCode%3Dfalse%26source%3Dmenu%26type%3Dorder-seat-new' \
+-H 'x-requested-with: XMLHttpRequest' \
+-H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) MacWechat/3.8.7(0x13080712) UnifiedPCMacWechat(0xf2641702) XWEB/18788 Flue' \
+-H 'accept: application/json, text/javascript, */*; q=0.01' \
+-H 'content-type: application/x-www-form-urlencoded' \
+-H 'sec-fetch-site: same-origin' \
+-H 'sec-fetch-mode: cors' \
+-H 'sec-fetch-dest: empty' \
+-H 'referer: https://chain24819.tmwanba.com/release209/' \
+-H 'accept-encoding: gzip, deflate, br' \
+-H 'accept-language: zh-CN,zh;q=0.9' \
+-H 'cookie: Hm_lvt_a74f7486b06667dba4c91299dbb5c683=1777253202; HMACCOUNT=B4D777DC7E840C5F; chain-id=43132; chain=1j9fjabeoo962fp5v606nng51m; Hm_lpvt_a74f7486b06667dba4c91299dbb5c683=1777253486' \
+-H 'priority: u=1, i' \
+'https://chain24819.tmwanba.com/dingzuo/item?referrer=https%3A%2F%2Fchain24819.tmwanba.com%2Frelease209%2F%23%2Fselect-seat-new%3Fmch_id%3D43254%26chain_id%3D43132%26num%3D6%26phone%3D%26showSelectSeat%3D1%26sss%3D0%26hours%3D0%26name%3D%25E6%2596%25B0%25E9%25A2%2584%25E7%25BA%25A6%25E8%25AE%25A2%25E5%25BA%25A7-%25E5%25A4%259A%25E4%25BA%25BA%26balance_ways%3D0%26showMchDetailBtn%3Dtrue%26user%3D%255Bobject%2520Object%255D%26amount_ways%3D1%26setQuery%3Dtrue%26mchlock%3D0%26onlyOrderSeat%3D1%26onlyBaojian%3Dfalse%26onlyHotel%3Dfalse%26onlyCode%3Dfalse%26source%3Dmenu%26type%3Dorder-seat-new'
+```
+
+## 3. 核心请求头说明
+| 请求头 | 作用 |
+|--------|------|
+| `x-requested-with: XMLHttpRequest` | 标识为前端异步AJAX接口 |
+| `User-Agent` | 伪装PC微信浏览器环境，接口强校验 |
+| `Referer` | 同源页面来源校验，必填 |
+| `chain-id` | 连锁网吧唯一ID：`43132` |
+| `chain` | 门店会话身份Cookie，过期需重新抓包 |
+| `content-type` | 表单类型（GET请求无实际作用） |
+
+## 4. URL 参数释义
+| 参数 | 数值 | 说明 |
+|------|------|------|
+| mch_id | 43254 | 单门店ID |
+| chain_id | 43132 | 连锁机构ID |
+| num | 6 | 单次最大选座数量限制 |
+| showSelectSeat | 1 | 开启选座页面模式 |
+| type | order-seat-new | 新版订座业务类型 |
+
+## 5. 响应数据结构
+### 5.1 外层通用结构
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": [],
+  "ext": {}
+}
+```
+- `code:0`：请求成功
+- `data`：区域机位列表数组
+- `ext`：门店全局统计、用户、配置信息
+
+### 5.2 data 区域单体字段
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | 区域唯一ID |
+| name | string | 区域/包间名称 |
+| type | string | 区域类型标识 |
+| on_machine | array | **已上机占用机位** |
+| off_machine | array | **空闲可预约机位** |
+| subscribe_machine | array | 已预约锁定机位 |
+| des | string | 硬件配置文案（显示器/显卡/CPU） |
+| fee | number | 单价：20元/小时 |
+| bj_machine | array | 包间机位绑定关系（双人/多人包专属） |
+
+### 5.3 ext 全局扩展字段
+| 字段 | 说明 |
+|------|------|
+| total | 126 | 门店总机位数量 |
+| online_num | 15 | 当前实时上机人数 |
+| uid | 27644392 | 当前登录用户ID |
+| now_time | 时间戳 | 服务器当前时间 |
+| limitNum | 6 | 最大选座限制 |
+| tel | 商家联系电话 |
+
+## 6. 业务区域分类
+1. 大众散座区：竞技区、卓威对战区、外星人对战区
+2. 多人包间区：双人包、三人包、四人包、五人包、六人包
+3. 高端单人区：舒适单人包、OLED单人包、极致单包、卓威600HZ顶配区
+4. 特色机型：双屏单人、蚂蚁显示器专属区
+
+## 7. 接口特征与调用限制
+1. 无请求签名、无加密、无token，**低防护**
+2. 强依赖：`Cookie(chain/chain-id)` + 微信UA + Referer
+3. 机位编码统一规则：`GN+三位数字`
+4. 全区域统一计费：20元/小时
+5. 实时数据：毫秒级返回机位上下机状态
+
+## 8. 衍生开发价值
+- 实时空位监控、空闲机位推送
+- 多区域硬件配置批量采集
+- 上座率统计、门店客流分析
+- 自动化选座/预约脚本开发
+- 连锁多门店批量遍历查询
+
+## 9. 注意事项
+1. `chain` 会话Cookie存在有效期，长期调用需定时更新
+2. 高频请求易触发访问限制，建议增加请求间隔
+3. 多人包间`bj_machine`为机位分组绑定，选座需匹配分组规则
+
+---
+文档生成时间：2026-04-27
+接口状态：正常可调用

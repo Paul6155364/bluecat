@@ -18,7 +18,7 @@ spring:
 
   # 数据源配置
   datasource:
-    url: jdbc:mysql://8.156.34.133:3306/bluecat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://125.69.67.246:27306/bluecat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
     username: root
     password: Root@2026#MySQL!
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -32,9 +32,9 @@ spring:
   # Redis配置
   data:
     redis:
-      host: 8.156.34.133
+      host: 125.69.67.246
       port: 6379
-      password: Redis@2026#Strong!
+      password: root123
       database: 0
       timeout: 30000
       client-type: jedis

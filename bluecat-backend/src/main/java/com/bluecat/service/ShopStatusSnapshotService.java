@@ -6,6 +6,7 @@ import com.bluecat.entity.ShopStatusSnapshot;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 门店实时状态快照表 Service
@@ -34,4 +35,14 @@ public interface ShopStatusSnapshotService extends IService<ShopStatusSnapshot> 
      * 获取门店指定时间范围内的快照
      */
     List<ShopStatusSnapshot> listByShopIdAndTimeRange(Long shopId, LocalDateTime startTime, LocalDateTime endTime);
+
+    /**
+     * 批量获取多个门店的最新快照
+     */
+    Map<Long, ShopStatusSnapshot> mapLatestByShopIds(List<Long> shopIds);
+
+    /**
+     * 批量获取多个门店指定时间范围内的快照
+     */
+    Map<Long, List<ShopStatusSnapshot>> mapByShopIdsAndTimeRange(List<Long> shopIds, LocalDateTime startTime, LocalDateTime endTime);
 }

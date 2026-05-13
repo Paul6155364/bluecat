@@ -48,7 +48,6 @@ public class AnalysisController {
             @RequestParam String shopIds,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-        System.out.println("startTime=" + startTime + ", endTime=" + endTime);
         // 解析逗号分隔的 shopIds 字符串
         List<Long> shopIdList = Arrays.stream(shopIds.split(","))
                 .map(String::trim)
@@ -56,19 +55,33 @@ public class AnalysisController {
                 .map(Long::parseLong)
                 .collect(Collectors.toList());
 
-        Map<String, Object> result = new HashMap<>();
-        List<Map<String, Object>> shopDataList = new ArrayList<>();
+        if (shopIdList.isEmpty()) {
+            return Result.success(new HashMap<>());
+        }
 
+        // 1. 批量查询门店信息
+        Map<Long, ShopInfo> shopMap = shopInfoService.listByIds(shopIdList).stream()
+                .collect(Collectors.toMap(ShopInfo::getId, s -> s));
+
+        // 2. 批量查询最新快照
+        Map<Long, ShopStatusSnapshot> latestMap = shopStatusSnapshotService.mapLatestByShopIds(shopIdList);
+
+        // 3. 批量查询历史快照
+        Map<Long, List<ShopStatusSnapshot>> historyMap = shopStatusSnapshotService
+                .mapByShopIdsAndTimeRange(shopIdList, startTime, endTime);
+
+        // 组装数据
+        List<Map<String, Object>> shopDataList = new ArrayList<>();
         for (Long shopId : shopIdList) {
-            ShopInfo shop = shopInfoService.getById(shopId);
-            if (shop == null) { continue; }
+            ShopInfo shop = shopMap.get(shopId);
+            if (shop == null) continue;
 
             Map<String, Object> shopData = new HashMap<>();
             shopData.put("shopId", shopId);
             shopData.put("shopName", shop.getName());
 
-            // 获取最新快照
-            ShopStatusSnapshot latestSnapshot = shopStatusSnapshotService.getLatestByShopId(shopId);
+            // 最新快照
+            ShopStatusSnapshot latestSnapshot = latestMap.get(shopId);
             if (latestSnapshot != null) {
                 shopData.put("totalMachines", latestSnapshot.getTotalMachines());
                 shopData.put("freeMachines", latestSnapshot.getFreeMachines());
@@ -81,31 +94,24 @@ public class AnalysisController {
                 shopData.put("occupancyRate", 0);
             }
 
-            // 获取历史数据计算平均值
-            LambdaQueryWrapper<ShopStatusSnapshot> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(ShopStatusSnapshot::getShopId, shopId);
-            if (startTime != null) {
-                wrapper.ge(ShopStatusSnapshot::getSnapshotTime, startTime);
-            }
-            if (endTime != null) {
-                wrapper.le(ShopStatusSnapshot::getSnapshotTime, endTime);
-            }
-            wrapper.orderByDesc(ShopStatusSnapshot::getSnapshotTime);
-
-            List<ShopStatusSnapshot> snapshots = shopStatusSnapshotService.list(wrapper);
+            // 历史数据计算平均值
+            List<ShopStatusSnapshot> snapshots = historyMap.getOrDefault(shopId, Collections.emptyList());
             if (!snapshots.isEmpty()) {
-                double avgRate = snapshots.stream()
+                List<ShopStatusSnapshot> validSnapshots = snapshots.stream()
                         .filter(s -> s.getOccupancyRate() != null)
+                        .collect(Collectors.toList());
+
+                double avgRate = validSnapshots.stream()
                         .mapToDouble(s -> s.getOccupancyRate().doubleValue())
                         .average()
                         .orElse(0);
-                int maxRate = snapshots.stream()
-                        .filter(s -> s.getOccupancyRate() != null)
+
+                int maxRate = validSnapshots.stream()
                         .mapToInt(s -> s.getOccupancyRate().intValue())
                         .max()
                         .orElse(0);
-                int minRate = snapshots.stream()
-                        .filter(s -> s.getOccupancyRate() != null)
+
+                int minRate = validSnapshots.stream()
                         .mapToInt(s -> s.getOccupancyRate().intValue())
                         .min()
                         .orElse(0);
@@ -115,17 +121,13 @@ public class AnalysisController {
                 shopData.put("minOccupancyRate", minRate);
 
                 // 趋势数据：按天采样，每天取平均值
-                List<Map<String, Object>> trend = snapshots.stream()
-                        .filter(s -> s.getOccupancyRate() != null)
-                        .collect(Collectors.groupingBy(
-                                s -> s.getSnapshotTime().toLocalDate()
-                        ))
+                List<Map<String, Object>> trend = validSnapshots.stream()
+                        .collect(Collectors.groupingBy(s -> s.getSnapshotTime().toLocalDate()))
                         .entrySet().stream()
-                        .sorted(Map.Entry.comparingByKey()) // 按日期升序
+                        .sorted(Map.Entry.comparingByKey())
                         .map(entry -> {
                             double dayAvg = entry.getValue().stream()
-                                    .map(s -> s.getOccupancyRate().doubleValue())
-                                    .mapToDouble(Double::doubleValue)
+                                    .mapToDouble(s -> s.getOccupancyRate().doubleValue())
                                     .average()
                                     .orElse(0);
                             Map<String, Object> point = new HashMap<>();
@@ -154,6 +156,7 @@ public class AnalysisController {
             return Integer.compare(valB, valA);
         });
 
+        Map<String, Object> result = new HashMap<>();
         result.put("shops", shopDataList);
         result.put("rankTime", LocalDateTime.now());
 
@@ -315,6 +318,112 @@ public class AnalysisController {
         if (rate < 60) return 3;
         if (rate < 80) return 4;
         return 5;
+    }
+
+    /**
+     * 门店24小时上座率对比数据
+     * 用于PK关系门店的每日24小时对比表格
+     */
+    @ApiOperation("门店24小时上座率对比")
+    @GetMapping("/pk/hourly")
+    public Result<Map<String, Object>> pkHourly(
+            @RequestParam String shopIds,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+
+        // 解析门店ID列表
+        List<Long> shopIdList = Arrays.stream(shopIds.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(Collectors.toList());
+
+        if (shopIdList.isEmpty()) {
+            return Result.success(new HashMap<>());
+        }
+
+        // 默认查询最近7天
+        LocalDateTime endDateTime;
+        LocalDateTime startDateTime;
+        if (endDate == null) {
+            endDateTime = LocalDateTime.now();
+        } else {
+            endDateTime = endDate.atTime(LocalTime.MAX);
+        }
+        if (startDate == null) {
+            startDateTime = endDateTime.minusDays(7).with(LocalTime.MIN);
+        } else {
+            startDateTime = startDate.atStartOfDay();
+        }
+
+        // 批量查询门店信息
+        Map<Long, ShopInfo> shopMap = shopInfoService.listByIds(shopIdList).stream()
+                .collect(Collectors.toMap(ShopInfo::getId, s -> s));
+
+        // 获取每小时上座率数据
+        Map<Long, Map<String, Map<Integer, Double>>> hourlyData = areaStatusSnapshotService
+                .getHourlyOccupancyByShops(shopIdList, startDateTime, endDateTime);
+
+        // 生成日期列表
+        List<String> dateList = new ArrayList<>();
+        LocalDate current = startDateTime.toLocalDate();
+        LocalDate end = endDateTime.toLocalDate();
+        while (!current.isAfter(end)) {
+            dateList.add(current.toString());
+            current = current.plusDays(1);
+        }
+
+        // 组装返回数据
+        List<Map<String, Object>> shopList = new ArrayList<>();
+        for (Long shopId : shopIdList) {
+            ShopInfo shop = shopMap.get(shopId);
+            if (shop == null) continue;
+
+            Map<String, Object> shopData = new HashMap<>();
+            shopData.put("shopId", shopId);
+            shopData.put("shopName", shop.getName());
+
+            Map<String, Map<Integer, Double>> dateHourMap = hourlyData.getOrDefault(shopId, new HashMap<>());
+
+            // 每天的24小时数据
+            List<Map<String, Object>> dailyData = new ArrayList<>();
+            for (String date : dateList) {
+                Map<Integer, Double> hourMap = dateHourMap.getOrDefault(date, new HashMap<>());
+
+                Map<String, Object> dayData = new HashMap<>();
+                dayData.put("date", date);
+
+                // 24小时的上座率
+                List<Map<String, Object>> hours = new ArrayList<>();
+                for (int h = 0; h < 24; h++) {
+                    Map<String, Object> hourData = new HashMap<>();
+                    hourData.put("hour", h);
+                    hourData.put("hourLabel", String.format("%02d:00", h));
+                    hourData.put("rate", hourMap.getOrDefault(h, 0.0));
+                    hours.add(hourData);
+                }
+                dayData.put("hours", hours);
+
+                // 当天平均值
+                double dayAvg = hourMap.values().stream()
+                        .mapToDouble(Double::doubleValue)
+                        .average()
+                        .orElse(0.0);
+                dayData.put("dayAvg", Math.round(dayAvg * 10) / 10.0);
+
+                dailyData.add(dayData);
+            }
+            shopData.put("dailyData", dailyData);
+            shopList.add(shopData);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("shops", shopList);
+        result.put("dateList", dateList);
+        result.put("startDate", startDateTime.toLocalDate().toString());
+        result.put("endDate", endDateTime.toLocalDate().toString());
+
+        return Result.success(result);
     }
 
     /**
