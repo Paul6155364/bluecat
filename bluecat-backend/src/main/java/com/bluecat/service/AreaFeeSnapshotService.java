@@ -17,4 +17,9 @@ public interface AreaFeeSnapshotService extends IService<AreaFeeSnapshot> {
      * 根据门店快照ID查询区域费用快照列表
      */
     List<AreaFeeSnapshot> listBySnapshotId(Long snapshotId);
+
+    /**
+     * 批量根据门店快照ID列表查询区域费用快照
+     */
+    List<AreaFeeSnapshot> listBySnapshotIds(List<Long> snapshotIds);
 }

@@ -48,7 +48,7 @@ public class AnalysisController {
             @RequestParam String shopIds,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-
+        System.out.println("startTime=" + startTime + ", endTime=" + endTime);
         // 解析逗号分隔的 shopIds 字符串
         List<Long> shopIdList = Arrays.stream(shopIds.split(","))
                 .map(String::trim)
@@ -114,15 +114,26 @@ public class AnalysisController {
                 shopData.put("maxOccupancyRate", maxRate);
                 shopData.put("minOccupancyRate", minRate);
 
-                // 趋势数据
-                List<Map<String, Object>> trend = new ArrayList<>();
-                for (int i = Math.min(snapshots.size() - 1, 19); i >= 0; i--) {
-                    ShopStatusSnapshot s = snapshots.get(i);
-                    Map<String, Object> point = new HashMap<>();
-                    point.put("time", s.getSnapshotTime());
-                    point.put("rate", s.getOccupancyRate());
-                    trend.add(point);
-                }
+                // 趋势数据：按天采样，每天取平均值
+                List<Map<String, Object>> trend = snapshots.stream()
+                        .filter(s -> s.getOccupancyRate() != null)
+                        .collect(Collectors.groupingBy(
+                                s -> s.getSnapshotTime().toLocalDate()
+                        ))
+                        .entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey()) // 按日期升序
+                        .map(entry -> {
+                            double dayAvg = entry.getValue().stream()
+                                    .map(s -> s.getOccupancyRate().doubleValue())
+                                    .mapToDouble(Double::doubleValue)
+                                    .average()
+                                    .orElse(0);
+                            Map<String, Object> point = new HashMap<>();
+                            point.put("time", entry.getKey().atStartOfDay());
+                            point.put("rate", (int) Math.round(dayAvg));
+                            return point;
+                        })
+                        .collect(Collectors.toList());
                 shopData.put("trend", trend);
             } else {
                 shopData.put("avgOccupancyRate", 0);

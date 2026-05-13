@@ -52,10 +52,33 @@ public class StatusController {
     public Result<List<Map<String, Object>>> listRealtime(Long configId, Long shopId) {
         List<ShopStatusSnapshot> snapshots = shopStatusSnapshotService.listLatestAll();
 
-        // 转换为带门店信息的列表
+        if (snapshots.isEmpty()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
+
+        // 1. 收集所有 shopId 和 configId
+        List<Long> shopIds = snapshots.stream()
+                .map(ShopStatusSnapshot::getShopId)
+                .collect(java.util.stream.Collectors.toList());
+        List<Long> snapshotIds = snapshots.stream()
+                .map(ShopStatusSnapshot::getId)
+                .collect(java.util.stream.Collectors.toList());
+
+        // 2. 批量查询：门店信息、配置信息、区域费用
+        Map<Long, ShopInfo> shopMap = shopInfoService.listByIds(shopIds).stream()
+                .collect(java.util.stream.Collectors.toMap(ShopInfo::getId, s -> s));
+        Map<Long, ShopConfig> configMap = shopConfigService.listByIds(
+                shopMap.values().stream()
+                        .map(ShopInfo::getConfigId)
+                        .collect(java.util.stream.Collectors.toSet())
+        ).stream().collect(java.util.stream.Collectors.toMap(ShopConfig::getId, c -> c));
+        Map<Long, List<AreaFeeSnapshot>> feeMap = areaFeeSnapshotService.listBySnapshotIds(snapshotIds).stream()
+                .collect(java.util.stream.Collectors.groupingBy(AreaFeeSnapshot::getSnapshotId));
+
+        // 3. 组装结果
         List<Map<String, Object>> result = new java.util.ArrayList<>();
         for (ShopStatusSnapshot snapshot : snapshots) {
-            ShopInfo shop = shopInfoService.getById(snapshot.getShopId());
+            ShopInfo shop = shopMap.get(snapshot.getShopId());
             if (shop == null) continue;
 
             // 按配置筛选
@@ -64,7 +87,7 @@ public class StatusController {
             if (shopId != null && !shopId.equals(snapshot.getShopId())) continue;
 
             // 获取网咖配置名称
-            ShopConfig config = shopConfigService.getById(shop.getConfigId());
+            ShopConfig config = configMap.get(shop.getConfigId());
             String configName = config != null ? config.getConfigName() : "-";
 
             Map<String, Object> item = new HashMap<>();
@@ -79,8 +102,9 @@ public class StatusController {
             item.put("occupancyRate", snapshot.getOccupancyRate());
             item.put("remain", snapshot.getRemain());
             item.put("dayRevenue", snapshot.getDayRevenue());
+
             // 费用摘要：最低费率、最高费率、区域费用列表
-            List<AreaFeeSnapshot> feeList = areaFeeSnapshotService.listBySnapshotId(snapshot.getId());
+            List<AreaFeeSnapshot> feeList = feeMap.getOrDefault(snapshot.getId(), java.util.Collections.emptyList());
             item.put("areaFeeList", feeList);
             if (!feeList.isEmpty()) {
                 java.math.BigDecimal minRate = feeList.stream()
