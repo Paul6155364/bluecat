@@ -1210,10 +1210,18 @@ public class LaobanApiServiceImpl implements LaobanApiService {
             areaSnapshot.setFreeMachines(areaFree);
             areaSnapshot.setBusyMachines(areaBusy);
             areaSnapshot.setSnapshotTime(snapshotTime);
+            // 计算上座率 = busyMachines / totalMachines × 100%
+            if (areaTotal > 0) {
+                BigDecimal rate = BigDecimal.valueOf(areaBusy)
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(BigDecimal.valueOf(areaTotal), 2, RoundingMode.HALF_UP);
+                areaSnapshot.setOccupancyRate(rate);
+            }
             areaStatusSnapshotService.save(areaSnapshot);
 
-            log.debug("网鱼网咖区域明细: shopId={}, area={}, total={}, free={}, busy={}",
-                    shop.getId(), areaName, areaTotal, areaFree, areaBusy);
+            log.debug("网鱼网咖区域明细: shopId={}, area={}, total={}, free={}, busy={}, rate={}",
+                    shop.getId(), areaName, areaTotal, areaFree, areaBusy,
+                    areaTotal > 0 ? (areaBusy * 100.0 / areaTotal) : 0);
         }
 
         // 更新门店快照中的统计信息

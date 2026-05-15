@@ -364,14 +364,12 @@ public class AnalysisController {
         Map<Long, Map<String, Map<Integer, Double>>> hourlyData = areaStatusSnapshotService
                 .getHourlyOccupancyByShops(shopIdList, startDateTime, endDateTime);
 
-        // 生成日期列表
-        List<String> dateList = new ArrayList<>();
-        LocalDate current = startDateTime.toLocalDate();
-        LocalDate end = endDateTime.toLocalDate();
-        while (!current.isAfter(end)) {
-            dateList.add(current.toString());
-            current = current.plusDays(1);
+        // 从实际数据中提取有数据的日期列表（去重、排序）
+        Set<String> dateSet = new TreeSet<>();
+        for (Map<String, Map<Integer, Double>> shopData : hourlyData.values()) {
+            dateSet.addAll(shopData.keySet());
         }
+        List<String> dateList = new ArrayList<>(dateSet);
 
         // 组装返回数据
         List<Map<String, Object>> shopList = new ArrayList<>();
@@ -393,23 +391,23 @@ public class AnalysisController {
                 Map<String, Object> dayData = new HashMap<>();
                 dayData.put("date", date);
 
-                // 24小时的上座率
+                // 24小时的上座率：无数据返回 null
                 List<Map<String, Object>> hours = new ArrayList<>();
                 for (int h = 0; h < 24; h++) {
                     Map<String, Object> hourData = new HashMap<>();
                     hourData.put("hour", h);
                     hourData.put("hourLabel", String.format("%02d:00", h));
-                    hourData.put("rate", hourMap.getOrDefault(h, 0.0));
+                    hourData.put("rate", hourMap.containsKey(h) ? Math.round(hourMap.get(h) * 10) / 10.0 : null);
                     hours.add(hourData);
                 }
                 dayData.put("hours", hours);
 
-                // 当天平均值
+                // 当天平均值：有数据才计算，否则返回 null
                 double dayAvg = hourMap.values().stream()
                         .mapToDouble(Double::doubleValue)
                         .average()
-                        .orElse(0.0);
-                dayData.put("dayAvg", Math.round(dayAvg * 10) / 10.0);
+                        .orElse(-1.0);
+                dayData.put("dayAvg", dayAvg >= 0 ? Math.round(dayAvg * 10) / 10.0 : null);
 
                 dailyData.add(dayData);
             }

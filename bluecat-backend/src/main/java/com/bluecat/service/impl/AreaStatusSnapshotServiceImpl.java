@@ -9,15 +9,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
+/**
+ * 区域实时状态快照表 Service 实现
+ *
+ * @author BlueCat
+ * @since 2026-03-30
+ */
 @Service
 @RequiredArgsConstructor
-public class AreaStatusSnapshotServiceImpl extends ServiceImpl<AreaStatusSnapshotMapper, AreaStatusSnapshot> implements AreaStatusSnapshotService {
+public class AreaStatusSnapshotServiceImpl extends ServiceImpl<AreaStatusSnapshotMapper, AreaStatusSnapshot>
+        implements AreaStatusSnapshotService {
+
+    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Override
     public List<AreaStatusSnapshot> listBySnapshotId(Long snapshotId) {
@@ -40,49 +47,38 @@ public class AreaStatusSnapshotServiceImpl extends ServiceImpl<AreaStatusSnapsho
         return list(wrapper);
     }
 
+    /**
+     * 获取门店每日24小时上座率数据（SQL层聚合）
+     * <p>
+     * 优化说明：
+     * - 旧方案：查出全部原始记录到 JVM，再 Java 循环分组聚合。
+     *          数据量大时（数十万条）会造成 OOM、GC 压力、响应慢。
+     * - 新方案：通过 SQL GROUP BY 直接在数据库层聚合，只返回聚合后的结果集。
+     *          返回量级：shopIds.size × 天数 × 24，即使一年数据也只有 ~8,760 条/门店。
+     */
     @Override
-    public Map<Long, Map<String, Map<Integer, Double>>> getHourlyOccupancyByShops(List<Long> shopIds, LocalDateTime startTime, LocalDateTime endTime) {
-        List<AreaStatusSnapshot> list = listByShopIdsAndTimeRange(shopIds, startTime, endTime);
+    public Map<Long, Map<String, Map<Integer, Double>>> getHourlyOccupancyByShops(
+            List<Long> shopIds, LocalDateTime startTime, LocalDateTime endTime) {
 
-        // 按门店ID -> 日期 -> 小时分组，计算平均上座率
-        Map<Long, Map<String, List<BigDecimal>>> tempMap = new HashMap<>();
-
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-        for (AreaStatusSnapshot snapshot : list) {
-            if (snapshot.getSnapshotTime() == null || snapshot.getOccupancyRate() == null) {
-                continue;
-            }
-            Long shopId = snapshot.getShopId();
-            String date = snapshot.getSnapshotTime().toLocalDate().format(dateFormatter);
-            int hour = snapshot.getSnapshotTime().getHour();
-
-            tempMap.computeIfAbsent(shopId, k -> new HashMap<>())
-                    .computeIfAbsent(date + "_" + hour, k -> new ArrayList<>())
-                    .add(snapshot.getOccupancyRate());
+        if (CollectionUtils.isEmpty(shopIds)) {
+            return Collections.emptyMap();
         }
 
-        // 计算平均值
+        // 数据库层 SQL 聚合
+        List<Map<String, Object>> rows = baseMapper.selectHourlyOccupancyGrouped(shopIds, startTime, endTime);
+
+        // 按 门店ID -> 日期 -> 小时 构建结果
         Map<Long, Map<String, Map<Integer, Double>>> result = new HashMap<>();
-        for (Map.Entry<Long, Map<String, List<BigDecimal>>> shopEntry : tempMap.entrySet()) {
-            Long shopId = shopEntry.getKey();
-            Map<String, Map<Integer, Double>> dateHourMap = new TreeMap<>();
 
-            for (Map.Entry<String, List<BigDecimal>> entry : shopEntry.getValue().entrySet()) {
-                String[] parts = entry.getKey().split("_");
-                String date = parts[0];
-                int hour = Integer.parseInt(parts[1]);
+        for (Map<String, Object> row : rows) {
+            Long shopId = ((Number) row.get("shopId")).longValue();
+            String date = row.get("date").toString();
+            int hour = ((Number) row.get("hour")).intValue();
+            double avgRate = ((Number) row.get("avgRate")).doubleValue();
 
-                double avgRate = entry.getValue().stream()
-                        .mapToDouble(BigDecimal::doubleValue)
-                        .average()
-                        .orElse(0.0);
-
-                dateHourMap.computeIfAbsent(date, k -> new TreeMap<>())
-                        .put(hour, Math.round(avgRate * 10) / 10.0);
-            }
-
-            result.put(shopId, dateHourMap);
+            result.computeIfAbsent(shopId, k -> new TreeMap<>())
+                  .computeIfAbsent(date, k -> new TreeMap<>())
+                  .put(hour, avgRate);
         }
 
         return result;

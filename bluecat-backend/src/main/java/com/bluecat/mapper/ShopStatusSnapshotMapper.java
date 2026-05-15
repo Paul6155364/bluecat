@@ -21,6 +21,18 @@ import java.util.Map;
 public interface ShopStatusSnapshotMapper extends BaseMapper<ShopStatusSnapshot> {
 
     /**
+     * 获取所有门店最新快照（优化后的JOIN查询）
+     */
+    @Select("SELECT s.* FROM shop_status_snapshot s " +
+            "INNER JOIN (" +
+            "    SELECT shop_id, MAX(snapshot_time) as max_time " +
+            "    FROM shop_status_snapshot " +
+            "    GROUP BY shop_id" +
+            ") t ON s.shop_id = t.shop_id AND s.snapshot_time = t.max_time " +
+            "ORDER BY s.occupancy_rate DESC")
+    List<ShopStatusSnapshot> selectLatestAll();
+
+    /**
      * 查询指定门店今日累计营收
      * 计算方式：当天该门店所有 area_fee_snapshot 的 estimate_fee 之和
      */

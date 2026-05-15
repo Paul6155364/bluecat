@@ -44,11 +44,8 @@ public class ShopStatusSnapshotServiceImpl extends ServiceImpl<ShopStatusSnapsho
 
     @Override
     public List<ShopStatusSnapshot> listLatestAll() {
-        LambdaQueryWrapper<ShopStatusSnapshot> wrapper = new LambdaQueryWrapper<ShopStatusSnapshot>()
-                .inSql(ShopStatusSnapshot::getId,
-                        "SELECT id FROM shop_status_snapshot WHERE (shop_id, snapshot_time) IN (SELECT shop_id, MAX(snapshot_time) FROM shop_status_snapshot GROUP BY shop_id)")
-                .orderByDesc(ShopStatusSnapshot::getOccupancyRate);
-        return list(wrapper);
+        // 使用 Mapper 的原生 SQL 查询（优化后的 JOIN 查询）
+        return baseMapper.selectLatestAll();
     }
 
     @Override
